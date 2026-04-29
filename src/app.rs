@@ -25,20 +25,73 @@ pub fn tag_color(tag: &str) -> (u8, u8, u8) {
     TAG_COLORS[idx]
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub enum FilterMode {
+    All,
+    ByTag(String),
+    ByStatus(TodoStatus),
+    DueToday,
+    Overdue,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum SortOrder {
+    Default,     // Pending优先 → 优先级 → 创建时间（与DB一致）
+    ByPriority,  // 优先级 High→Medium→Low
+    ByDueDate,   // 最近到期优先，无日期排末尾
+    ByCreatedAt, // 最新创建优先
+}
+
+impl SortOrder {
+    pub fn next(&self) -> Self {
+        match self {
+            SortOrder::Default => SortOrder::ByPriority,
+            SortOrder::ByPriority => SortOrder::ByDueDate,
+            SortOrder::ByDueDate => SortOrder::ByCreatedAt,
+            SortOrder::ByCreatedAt => SortOrder::Default,
+        }
+    }
+
+    pub fn label(&self) -> &'static str {
+        match self {
+            SortOrder::Default => "默认排序",
+            SortOrder::ByPriority => "按优先级",
+            SortOrder::ByDueDate => "按截止日",
+            SortOrder::ByCreatedAt => "按创建时间",
+        }
+    }
+}
+
 pub struct AppState {
     pub mode: AppMode,
     pub todos: Vec<Todo>,
     pub all_tags: Vec<String>,
-    pub selected_tag: Option<String>,
+    pub filter: FilterMode,
     pub tag_panel_index: usize,
     pub focus_tag_panel: bool,
     pub selected_index: usize,
+    pub sort_order: SortOrder,
     #[allow(dead_code)]
     pub list_offset: usize,
     pub search_query: String,
     pub form: FormState,
     pub error_message: Option<String>,
     storage: Storage,
+}
+
+// Keep backward-compat accessor used in ui/mod.rs title bar
+impl AppState {
+    pub fn selected_tag_label(&self) -> &str {
+        match &self.filter {
+            FilterMode::All => "全部",
+            FilterMode::ByTag(t) => t.as_str(),
+            FilterMode::ByStatus(TodoStatus::Pending) => "未完成",
+            FilterMode::ByStatus(TodoStatus::Done) => "已完成",
+            FilterMode::ByStatus(TodoStatus::Cancelled) => "已取消",
+            FilterMode::DueToday => "今日到期",
+            FilterMode::Overdue => "已逾期",
+        }
+    }
 }
 
 impl AppState {
@@ -50,10 +103,11 @@ impl AppState {
             mode: AppMode::Normal,
             todos,
             all_tags,
-            selected_tag: None,
+            filter: FilterMode::All,
             tag_panel_index: 0,
             focus_tag_panel: false,
             selected_index: 0,
+            sort_order: SortOrder::Default,
             list_offset: 0,
             search_query: String::new(),
             form: FormState::default(),
@@ -62,29 +116,63 @@ impl AppState {
         })
     }
 
-    /// 返回经标签过滤和搜索关键词过滤后的 todo 列表。
+    /// 返回经过滤和搜索后的 todo 列表，按 sort_order 排序。
     pub fn filtered_todos(&self) -> Vec<&Todo> {
-        let tag_filter = self.selected_tag.as_deref();
         let search = if self.search_query.is_empty() {
             None
         } else {
             Some(self.search_query.to_lowercase())
         };
 
-        self.todos
+        let mut result: Vec<&Todo> = self
+            .todos
             .iter()
             .filter(|t| {
-                let tag_ok = match tag_filter {
-                    None => true,
-                    Some(tag) => t.tags.iter().any(|tg| tg == tag),
+                let filter_ok = match &self.filter {
+                    FilterMode::All => true,
+                    FilterMode::ByTag(tag) => t.tags.iter().any(|tg| tg == tag),
+                    FilterMode::ByStatus(status) => &t.status == status,
+                    FilterMode::DueToday => t.is_due_today(),
+                    FilterMode::Overdue => t.is_overdue(),
                 };
                 let search_ok = match &search {
                     None => true,
-                    Some(q) => t.title.to_lowercase().contains(q.as_str()),
+                    Some(q) => {
+                        t.title.to_lowercase().contains(q.as_str())
+                            || t.tags.iter().any(|tag| tag.to_lowercase().contains(q.as_str()))
+                            || t.notes
+                                .as_deref()
+                                .unwrap_or("")
+                                .to_lowercase()
+                                .contains(q.as_str())
+                    }
                 };
-                tag_ok && search_ok
+                filter_ok && search_ok
             })
-            .collect()
+            .collect();
+
+        match self.sort_order {
+            SortOrder::Default => {} // DB 已排序，保持原序
+            SortOrder::ByPriority => result.sort_by_key(|t| match t.priority {
+                Priority::High => 0,
+                Priority::Medium => 1,
+                Priority::Low => 2,
+            }),
+            SortOrder::ByDueDate => result.sort_by(|a, b| {
+                let parse = |s: Option<&str>| s.and_then(|d| d.parse::<NaiveDate>().ok());
+                match (parse(a.due_date.as_deref()), parse(b.due_date.as_deref())) {
+                    (Some(da), Some(db)) => da.cmp(&db),
+                    (Some(_), None) => std::cmp::Ordering::Less,
+                    (None, Some(_)) => std::cmp::Ordering::Greater,
+                    (None, None) => std::cmp::Ordering::Equal,
+                }
+            }),
+            SortOrder::ByCreatedAt => {
+                result.sort_by(|a, b| b.created_at.cmp(&a.created_at));
+            }
+        }
+
+        result
     }
 
     /// 返回当前高亮的 todo（在过滤后列表中）。
@@ -92,10 +180,17 @@ impl AppState {
         self.filtered_todos().get(self.selected_index).copied()
     }
 
-    /// 返回标签面板条目列表：第一项为 `None`（全部），其余为标签名。
-    pub fn tag_panel_items(&self) -> Vec<Option<&str>> {
-        let mut items: Vec<Option<&str>> = vec![None]; // None = 全部
-        items.extend(self.all_tags.iter().map(|t| Some(t.as_str())));
+    /// 返回标签面板条目列表：内置虚拟条目 + 真实标签。
+    pub fn tag_panel_items(&self) -> Vec<PanelItem> {
+        let mut items = vec![
+            PanelItem::All,
+            PanelItem::Status(TodoStatus::Pending),
+            PanelItem::Status(TodoStatus::Done),
+            PanelItem::Status(TodoStatus::Cancelled),
+            PanelItem::DueToday,
+            PanelItem::Overdue,
+        ];
+        items.extend(self.all_tags.iter().map(|t| PanelItem::Tag(t.clone())));
         items
     }
 
@@ -134,6 +229,10 @@ impl AppState {
             }
             KeyCode::Char(' ') => self.toggle_status()?,
             KeyCode::Char('x') => self.cancel_todo()?,
+            KeyCode::Char('s') => {
+                self.sort_order = self.sort_order.next();
+                self.selected_index = 0;
+            }
             KeyCode::Char('j') | KeyCode::Down => self.move_down(),
             KeyCode::Char('k') | KeyCode::Up => self.move_up(),
             KeyCode::Char('g') | KeyCode::Home => self.selected_index = 0,
@@ -165,11 +264,11 @@ impl AppState {
             KeyCode::Tab | KeyCode::Right => self.focus_tag_panel = false,
             KeyCode::Char('j') | KeyCode::Down if self.tag_panel_index + 1 < items_len => {
                 self.tag_panel_index += 1;
-                self.sync_tag_filter();
+                self.sync_filter();
             }
             KeyCode::Char('k') | KeyCode::Up if self.tag_panel_index > 0 => {
                 self.tag_panel_index -= 1;
-                self.sync_tag_filter();
+                self.sync_filter();
             }
             KeyCode::Enter | KeyCode::Char(' ') => {
                 self.focus_tag_panel = false;
@@ -208,10 +307,8 @@ impl AppState {
             KeyCode::Enter => {
                 if self.form.focused_field == FormField::Tags {
                     if self.form.tag_input.trim().is_empty() {
-                        // 输入框为空时 Enter 提交表单
                         self.submit_form()?;
                     } else {
-                        // 有内容时 Enter 确认当前标签
                         self.form_confirm_tag();
                     }
                 } else {
@@ -227,8 +324,6 @@ impl AppState {
             KeyCode::Char('j') if self.form.focused_field == FormField::Priority => {
                 self.form_cycle_down();
             }
-            // Tags 字段：Ctrl+Enter 或 F2 提交整个表单（可用 Alt+Enter）
-            // 普通情况：在 Tags 以外的字段按 Enter 提交
             KeyCode::Char(c) => self.form_input(c),
             _ => {}
         }
@@ -273,9 +368,9 @@ impl AppState {
         Ok(AppAction::Continue)
     }
 
-    fn sync_tag_filter(&mut self) {
+    fn sync_filter(&mut self) {
         let items = self.tag_panel_items();
-        self.selected_tag = items[self.tag_panel_index].map(|s| s.to_string());
+        self.filter = items[self.tag_panel_index].to_filter();
         self.selected_index = 0;
     }
 
@@ -359,6 +454,12 @@ impl AppState {
             }
         };
 
+        let notes = if self.form.notes.trim().is_empty() {
+            None
+        } else {
+            Some(self.form.notes.trim().to_string())
+        };
+
         // 若 tag_input 还有未确认内容，自动加入
         let mut tags = self.form.tags.clone();
         let pending = self.form.tag_input.trim().to_string();
@@ -368,19 +469,14 @@ impl AppState {
 
         if let Some(edit_id) = self.form.editing_todo_id {
             if let Some(todo) = self.todos.iter_mut().find(|t| t.id == edit_id) {
-                let prev_title = todo.title.clone();
-                let prev_priority = todo.priority.clone();
-                let prev_tags = todo.tags.clone();
-                let prev_due_date = todo.due_date.clone();
+                let prev = todo.clone();
                 todo.title = title;
                 todo.priority = self.form.priority.clone();
                 todo.tags = tags;
                 todo.due_date = due_date;
+                todo.notes = notes;
                 if let Err(e) = self.storage.update_todo(todo) {
-                    todo.title = prev_title;
-                    todo.priority = prev_priority;
-                    todo.tags = prev_tags;
-                    todo.due_date = prev_due_date;
+                    *todo = prev;
                     self.error_message = Some(e.to_string());
                     return Ok(());
                 }
@@ -391,6 +487,7 @@ impl AppState {
                 priority: self.form.priority.clone(),
                 tags,
                 due_date,
+                notes,
             };
             let inserted = self.storage.insert_todo(&new_todo)?;
             self.todos.insert(0, inserted);
@@ -403,7 +500,6 @@ impl AppState {
         Ok(())
     }
 
-    // Tags 字段：Enter 确认当前输入的单个标签
     fn form_confirm_tag(&mut self) {
         let tag = self.form.tag_input.trim().to_string();
         if !tag.is_empty() && !self.form.tags.contains(&tag) {
@@ -414,7 +510,8 @@ impl AppState {
 
     fn form_next_field(&mut self) {
         self.form.focused_field = match self.form.focused_field {
-            FormField::Title => FormField::Tags,
+            FormField::Title => FormField::Notes,
+            FormField::Notes => FormField::Tags,
             FormField::Tags => FormField::Priority,
             FormField::Priority => FormField::DueDate,
             FormField::DueDate => FormField::Title,
@@ -424,7 +521,8 @@ impl AppState {
     fn form_prev_field(&mut self) {
         self.form.focused_field = match self.form.focused_field {
             FormField::Title => FormField::DueDate,
-            FormField::Tags => FormField::Title,
+            FormField::Notes => FormField::Title,
+            FormField::Tags => FormField::Notes,
             FormField::Priority => FormField::Tags,
             FormField::DueDate => FormField::Priority,
         };
@@ -436,11 +534,13 @@ impl AppState {
                 self.form.title.pop();
                 self.form.title_error = None;
             }
+            FormField::Notes => {
+                self.form.notes.pop();
+            }
             FormField::Tags => {
                 if !self.form.tag_input.is_empty() {
                     self.form.tag_input.pop();
                 } else {
-                    // 输入框为空时，退格删除最后一个已确认标签
                     self.form.tags.pop();
                 }
             }
@@ -458,8 +558,10 @@ impl AppState {
                 self.form.title.push(c);
                 self.form.title_error = None;
             }
+            FormField::Notes => {
+                self.form.notes.push(c);
+            }
             FormField::Tags => {
-                // 逗号或空格自动确认当前标签
                 if c == ',' || c == ' ' {
                     self.form_confirm_tag();
                 } else {
@@ -501,7 +603,6 @@ impl AppState {
         layout_tag_panel: Rect,
         layout_list: Rect,
     ) -> Result<()> {
-        // 弹窗模式下不处理鼠标（避免误操作）
         match self.mode {
             AppMode::Add | AppMode::Edit | AppMode::DeleteConfirm | AppMode::Help => return Ok(()),
             _ => {}
@@ -533,27 +634,22 @@ impl AppState {
         list_area: Rect,
     ) -> Result<()> {
         if in_rect(col, row, tag_area) {
-            // 标签面板内点击：inner area 从 border+1 开始
             let inner_row = row.saturating_sub(tag_area.y + 1);
             let items_len = self.tag_panel_items().len();
             let idx = inner_row as usize;
             if idx < items_len {
                 self.tag_panel_index = idx;
-                let items = self.tag_panel_items();
-                self.selected_tag = items[idx].map(|s| s.to_string());
-                self.selected_index = 0;
+                self.sync_filter();
                 self.focus_tag_panel = true;
                 self.mode = AppMode::Normal;
             }
         } else if in_rect(col, row, list_area) {
             self.focus_tag_panel = false;
-            // 列表内点击：inner area 从 border+1 开始
             let inner_row = row.saturating_sub(list_area.y + 1);
             let idx = inner_row as usize;
             let filtered_len = self.filtered_todos().len();
             if idx < filtered_len {
                 if self.selected_index == idx && self.mode == AppMode::Normal {
-                    // 双击同一项 → 打开详情
                     self.mode = AppMode::Detail;
                 } else {
                     self.selected_index = idx;
@@ -595,6 +691,44 @@ fn in_rect(col: u16, row: u16, r: Rect) -> bool {
     col >= r.x && col < r.x + r.width && row >= r.y && row < r.y + r.height
 }
 
+/// 标签面板条目类型，区分内置虚拟条目和真实标签。
+#[derive(Debug, Clone, PartialEq)]
+pub enum PanelItem {
+    All,
+    Status(TodoStatus),
+    DueToday,
+    Overdue,
+    Tag(String),
+}
+
+impl PanelItem {
+    pub fn to_filter(&self) -> FilterMode {
+        match self {
+            PanelItem::All => FilterMode::All,
+            PanelItem::Status(s) => FilterMode::ByStatus(s.clone()),
+            PanelItem::DueToday => FilterMode::DueToday,
+            PanelItem::Overdue => FilterMode::Overdue,
+            PanelItem::Tag(t) => FilterMode::ByTag(t.clone()),
+        }
+    }
+
+    pub fn label(&self) -> &str {
+        match self {
+            PanelItem::All => "全部",
+            PanelItem::Status(TodoStatus::Pending) => "未完成",
+            PanelItem::Status(TodoStatus::Done) => "已完成",
+            PanelItem::Status(TodoStatus::Cancelled) => "已取消",
+            PanelItem::DueToday => "今日到期",
+            PanelItem::Overdue => "已逾期",
+            PanelItem::Tag(t) => t.as_str(),
+        }
+    }
+
+    pub fn is_builtin(&self) -> bool {
+        !matches!(self, PanelItem::Tag(_))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -609,6 +743,7 @@ mod tests {
             priority: Priority::Medium,
             tags,
             due_date: None,
+            notes: None,
             created_at: "2026-01-01T00:00:00".to_string(),
         }
     }
@@ -625,16 +760,16 @@ mod tests {
                 .cloned()
                 .collect()
         };
-        // Keep tempfile alive by leaking it; OK for short-lived test processes
         std::mem::forget(tmp);
         AppState {
             mode: crate::models::AppMode::Normal,
             todos,
             all_tags,
-            selected_tag: None,
+            filter: FilterMode::All,
             tag_panel_index: 0,
             focus_tag_panel: false,
             selected_index: 0,
+            sort_order: SortOrder::Default,
             list_offset: 0,
             search_query: String::new(),
             form: crate::models::FormState::default(),
@@ -654,48 +789,86 @@ mod tests {
 
         assert_eq!(app.filtered_todos().len(), 3);
 
-        app.selected_tag = Some("工作".to_string());
+        app.filter = FilterMode::ByTag("工作".to_string());
         let work = app.filtered_todos();
         assert_eq!(work.len(), 2);
         assert!(work.iter().all(|t| t.tags.contains(&"工作".to_string())));
 
-        app.selected_tag = Some("生活".to_string());
+        app.filter = FilterMode::ByTag("生活".to_string());
         assert_eq!(app.filtered_todos().len(), 2);
     }
 
     #[test]
-    fn test_filtered_todos_by_search() {
-        let todos = vec![
-            make_todo(1, "买菜", vec![]),
-            make_todo(2, "写代码", vec![]),
-            make_todo(3, "买书", vec![]),
+    fn test_filtered_todos_by_status() {
+        let mut todos = vec![
+            make_todo(1, "未完成", vec![]),
+            make_todo(2, "已完成", vec![]),
         ];
+        todos[1].status = TodoStatus::Done;
         let mut app = make_app(todos);
 
-        app.search_query = "买".to_string();
-        assert_eq!(app.filtered_todos().len(), 2);
+        app.filter = FilterMode::ByStatus(TodoStatus::Pending);
+        assert_eq!(app.filtered_todos().len(), 1);
+        assert_eq!(app.filtered_todos()[0].title, "未完成");
 
+        app.filter = FilterMode::ByStatus(TodoStatus::Done);
+        assert_eq!(app.filtered_todos().len(), 1);
+        assert_eq!(app.filtered_todos()[0].title, "已完成");
+    }
+
+    #[test]
+    fn test_filtered_todos_by_search_includes_tags_and_notes() {
+        let mut todos = vec![
+            make_todo(1, "买菜", vec!["生活".to_string()]),
+            make_todo(2, "写代码", vec![]),
+            make_todo(3, "无关任务", vec![]),
+        ];
+        todos[2].notes = Some("记得买书".to_string());
+        let mut app = make_app(todos);
+
+        // 匹配 title
         app.search_query = "代码".to_string();
         assert_eq!(app.filtered_todos().len(), 1);
 
-        app.search_query = "不存在".to_string();
-        assert_eq!(app.filtered_todos().len(), 0);
+        // 匹配 tag
+        app.search_query = "生活".to_string();
+        assert_eq!(app.filtered_todos().len(), 1);
+
+        // 匹配 notes
+        app.search_query = "买书".to_string();
+        assert_eq!(app.filtered_todos().len(), 1);
+        assert_eq!(app.filtered_todos()[0].title, "无关任务");
     }
 
     #[test]
-    fn test_tag_panel_items() {
-        let todos = vec![
-            make_todo(1, "任务1", vec!["工作".to_string()]),
-            make_todo(2, "任务2", vec!["生活".to_string()]),
+    fn test_sort_by_priority() {
+        let mut todos = vec![
+            make_todo(1, "低", vec![]),
+            make_todo(2, "高", vec![]),
+            make_todo(3, "中", vec![]),
         ];
+        todos[0].priority = Priority::Low;
+        todos[1].priority = Priority::High;
+        todos[2].priority = Priority::Medium;
         let mut app = make_app(todos);
-        app.all_tags = vec!["工作".to_string(), "生活".to_string()];
 
+        app.sort_order = SortOrder::ByPriority;
+        let sorted = app.filtered_todos();
+        assert_eq!(sorted[0].title, "高");
+        assert_eq!(sorted[1].title, "中");
+        assert_eq!(sorted[2].title, "低");
+    }
+
+    #[test]
+    fn test_tag_panel_items_has_builtins() {
+        let app = make_app(vec![]);
         let items = app.tag_panel_items();
-        assert!(items[0].is_none());
-        assert_eq!(items[1], Some("工作"));
-        assert_eq!(items[2], Some("生活"));
-        assert_eq!(items.len(), 3);
+        assert!(matches!(items[0], PanelItem::All));
+        assert!(matches!(items[1], PanelItem::Status(TodoStatus::Pending)));
+        assert!(matches!(items[2], PanelItem::Status(TodoStatus::Done)));
+        assert!(matches!(items[3], PanelItem::Status(TodoStatus::Cancelled)));
+        assert!(matches!(items[4], PanelItem::DueToday));
+        assert!(matches!(items[5], PanelItem::Overdue));
     }
 
     #[test]
@@ -724,7 +897,7 @@ mod tests {
             make_todo(2, "生活任务", vec!["生活".to_string()]),
         ];
         let mut app = make_app(todos);
-        app.selected_tag = Some("生活".to_string());
+        app.filter = FilterMode::ByTag("生活".to_string());
         app.selected_index = 0;
 
         let selected = app.selected_todo().unwrap();

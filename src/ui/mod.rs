@@ -91,10 +91,10 @@ fn render_title_bar(frame: &mut Frame, app: &AppState, area: Rect) {
 fn render_status_bar(frame: &mut Frame, app: &AppState, area: Rect) {
     let search_hint;
     let hints = if app.focus_tag_panel {
-        " [Tab] 切回列表  [j/k] 移动  [Enter] 选择标签 "
+        " [→/Tab] 切回列表  [j/k] 移动  [Enter] 选择标签 "
     } else {
         match app.mode {
-            AppMode::Normal => " [Tab] 标签栏  [Enter] 详情  [a] 添加  [e] 编辑  [d] 删除  [Space] 完成  [x] 取消  [/] 搜索 ",
+            AppMode::Normal => " [←/Tab] 标签栏  [Enter] 详情  [a] 添加  [e] 编辑  [d] 删除  [Space] 完成  [x] 取消  [/] 搜索 ",
             AppMode::Search => {
                 search_hint = format!(" 搜索: {}█  [Esc] 退出", app.search_query);
                 &search_hint

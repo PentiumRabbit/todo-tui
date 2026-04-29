@@ -150,7 +150,7 @@ impl AppState {
             KeyCode::Enter if self.selected_todo().is_some() => {
                 self.mode = AppMode::Detail;
             }
-            KeyCode::Tab => {
+            KeyCode::Tab | KeyCode::Left => {
                 self.focus_tag_panel = true;
             }
             _ => {}
@@ -162,7 +162,7 @@ impl AppState {
         let items_len = self.tag_panel_items().len();
         match event.code {
             KeyCode::Char('q') => return Ok(AppAction::Quit),
-            KeyCode::Tab => self.focus_tag_panel = false,
+            KeyCode::Tab | KeyCode::Right => self.focus_tag_panel = false,
             KeyCode::Char('j') | KeyCode::Down if self.tag_panel_index + 1 < items_len => {
                 self.tag_panel_index += 1;
             }

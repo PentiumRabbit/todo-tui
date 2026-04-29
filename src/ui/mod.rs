@@ -37,14 +37,22 @@ pub fn render(frame: &mut Frame, app: &AppState) -> (Rect, Rect) {
         .constraints([Constraint::Min(0), Constraint::Length(1)])
         .split(size);
 
-    // 左侧标签栏 16 列，右侧列表占余下空间
-    let body = Layout::default()
-        .direction(Direction::Horizontal)
-        .constraints([Constraint::Length(16), Constraint::Min(0)])
-        .split(chunks[0]);
-
-    tags::render_tag_panel(frame, app, body[0]);
-    list::render_list(frame, app, body[1]);
+    let (tag_area, list_area) = if app.show_filter_panel {
+        let body = Layout::default()
+            .direction(Direction::Horizontal)
+            .constraints([Constraint::Length(16), Constraint::Min(0)])
+            .split(chunks[0]);
+        tags::render_tag_panel(frame, app, body[0]);
+        list::render_list(frame, app, body[1]);
+        (body[0], body[1])
+    } else {
+        let body = Layout::default()
+            .direction(Direction::Horizontal)
+            .constraints([Constraint::Min(0)])
+            .split(chunks[0]);
+        list::render_list(frame, app, body[0]);
+        (Rect::default(), body[0])
+    };
 
     render_status_bar(frame, app, chunks[1]);
 
@@ -56,7 +64,7 @@ pub fn render(frame: &mut Frame, app: &AppState) -> (Rect, Rect) {
         _ => {}
     }
 
-    (body[0], body[1])
+    (tag_area, list_area)
 }
 
 fn render_status_bar(frame: &mut Frame, app: &AppState, area: Rect) {

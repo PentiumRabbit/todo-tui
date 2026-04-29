@@ -63,6 +63,7 @@ pub struct AppState {
     pub filter: FilterMode,
     pub tag_panel_index: usize,
     pub focus_tag_panel: bool,
+    pub show_filter_panel: bool,
     pub selected_index: usize,
     pub sort_order: SortOrder,
     #[allow(dead_code)]
@@ -90,6 +91,7 @@ impl AppState {
             filter: FilterMode::All,
             tag_panel_index: 0,
             focus_tag_panel: false,
+            show_filter_panel: true,
             selected_index: 0,
             sort_order: SortOrder::Default,
             list_offset: 0,
@@ -236,8 +238,14 @@ impl AppState {
             KeyCode::Enter if self.selected_todo().is_some() => {
                 self.mode = AppMode::Detail;
             }
-            KeyCode::Tab | KeyCode::Left | KeyCode::Char('h') => {
+            KeyCode::Tab | KeyCode::Left | KeyCode::Char('h') if self.show_filter_panel => {
                 self.focus_tag_panel = true;
+            }
+            KeyCode::Char('H') => {
+                self.show_filter_panel = !self.show_filter_panel;
+                if !self.show_filter_panel {
+                    self.focus_tag_panel = false;
+                }
             }
             KeyCode::Char('L') => {
                 self.config.toggle_lang()?;
@@ -771,6 +779,7 @@ mod tests {
             filter: FilterMode::All,
             tag_panel_index: 0,
             focus_tag_panel: false,
+            show_filter_panel: true,
             selected_index: 0,
             sort_order: SortOrder::Default,
             list_offset: 0,

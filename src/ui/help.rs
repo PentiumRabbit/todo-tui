@@ -49,11 +49,11 @@ pub fn render_help(frame: &mut Frame, area: Rect) {
             Span::styled("跳到底部", desc),
         ]),
         Line::from(vec![
-            Span::styled("    ← / Tab      ", key),
+            Span::styled("    h / ← / Tab  ", key),
             Span::styled("切换到过滤栏", desc),
         ]),
         Line::from(vec![
-            Span::styled("    → / Tab      ", key),
+            Span::styled("    l / → / Tab  ", key),
             Span::styled("切换到 Todo 列表", desc),
         ]),
         Line::from(""),

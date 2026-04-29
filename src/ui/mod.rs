@@ -63,12 +63,12 @@ fn render_status_bar(frame: &mut Frame, app: &AppState, area: Rect) {
     let search_hint;
     let sort_hint;
     let hints = if app.focus_tag_panel {
-        " [→/Tab] 列表  [j/k] 移动  [Enter] 选择  [q] 退出"
+        " [l/→/Tab] 列表  [j/k] 移动  [Enter] 选择  [q] 退出"
     } else {
         match app.mode {
             AppMode::Normal => {
                 sort_hint = format!(
-                    " [←/Tab] 过滤栏  [a] 添加  [e] 编辑  [d] 删除  [Space] 完成  [x] 取消  [/] 搜索  [s] 排序:{}  [?] 帮助  [q] 退出",
+                    " [h/←/Tab] 过滤栏  [a] 添加  [e] 编辑  [d] 删除  [Space] 完成  [x] 取消  [/] 搜索  [s] 排序:{}  [?] 帮助  [q] 退出",
                     app.sort_order.label()
                 );
                 &sort_hint

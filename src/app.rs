@@ -124,7 +124,9 @@ impl AppState {
                     None => true,
                     Some(q) => {
                         t.title.to_lowercase().contains(q.as_str())
-                            || t.tags.iter().any(|tag| tag.to_lowercase().contains(q.as_str()))
+                            || t.tags
+                                .iter()
+                                .any(|tag| tag.to_lowercase().contains(q.as_str()))
                             || t.notes
                                 .as_deref()
                                 .unwrap_or("")

@@ -17,6 +17,12 @@ A keyboard-driven terminal todo manager built with Rust and [ratatui](https://gi
 
 ---
 
+## Screenshot
+
+![todo-tui](https://github.com/user-attachments/assets/568ccc66-e6cd-402a-a32d-49f37abb404f)
+
+---
+
 ## Features / 功能特性
 
 - **Filter panel** — filter by tag, status (Pending/Done/Cancelled), due today, or overdue / **过滤栏** — 按标签、状态、今日到期、已逾期过滤

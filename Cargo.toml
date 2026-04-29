@@ -16,7 +16,7 @@ depends = "$auto"
 section = "utils"
 priority = "optional"
 assets = [
-    ["target/x86_64-unknown-linux-gnu/release/todo-tui", "usr/bin/", "755"],
+    ["target/release/todo-tui", "usr/bin/", "755"],
 ]
 
 [[bin]]

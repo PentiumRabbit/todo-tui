@@ -8,11 +8,11 @@ use ratatui::{
 
 use crate::app::{tag_color, AppState};
 use crate::models::{AppMode, FormField, Priority};
-use crate::ui::centered_rect;
+use crate::ui::{centered_rect, theme};
 
+/// 渲染添加/编辑 Todo 表单弹窗。
 pub fn render_form(frame: &mut Frame, app: &AppState, area: Rect) {
-    let is_add = app.mode == AppMode::Add;
-    let title = if is_add {
+    let title = if app.mode == AppMode::Add {
         " 添加 Todo "
     } else {
         " 编辑 Todo "
@@ -25,7 +25,7 @@ pub fn render_form(frame: &mut Frame, app: &AppState, area: Rect) {
         .title(title)
         .borders(Borders::ALL)
         .border_type(BorderType::Rounded)
-        .border_style(Style::default().fg(Color::Cyan));
+        .border_style(theme::border_active());
 
     let inner = block.inner(popup);
     frame.render_widget(block, popup);
@@ -43,7 +43,7 @@ pub fn render_form(frame: &mut Frame, app: &AppState, area: Rect) {
         ])
         .split(inner);
 
-    render_field(
+    render_text_field(
         frame,
         "标题",
         &app.form.title,
@@ -59,7 +59,7 @@ pub fn render_form(frame: &mut Frame, app: &AppState, area: Rect) {
         app.form.focused_field == FormField::Priority,
         rows[3],
     );
-    render_field(
+    render_text_field(
         frame,
         "截止日期",
         &app.form.due_date,
@@ -68,44 +68,20 @@ pub fn render_form(frame: &mut Frame, app: &AppState, area: Rect) {
         rows[4],
     );
 
-    let hints = Line::from(vec![
-        Span::styled("  [Tab] ", Style::default().fg(Color::Rgb(120, 120, 120))),
-        Span::raw("切换  "),
-        Span::styled("[,/空格] ", Style::default().fg(Color::Rgb(120, 120, 120))),
-        Span::raw("确认标签  "),
-        Span::styled("[↑↓] ", Style::default().fg(Color::Rgb(120, 120, 120))),
-        Span::raw("切换优先级  "),
-        Span::styled(
-            "[Enter] ",
-            Style::default()
-                .fg(Color::Rgb(80, 200, 120))
-                .add_modifier(Modifier::BOLD),
-        ),
-        Span::raw("提交  "),
-        Span::styled("[Esc] ", Style::default().fg(Color::Rgb(200, 80, 80))),
-        Span::raw("取消"),
-    ]);
-    frame.render_widget(Paragraph::new(hints), rows[6]);
+    frame.render_widget(Paragraph::new(hint_line()), rows[6]);
 }
 
 fn render_tags_field(frame: &mut Frame, app: &AppState, area: Rect) {
     let focused = app.form.focused_field == FormField::Tags;
-    let border_style = if focused {
-        Style::default().fg(Color::Cyan)
-    } else {
-        Style::default().fg(Color::Rgb(80, 80, 80))
-    };
-
     let block = Block::default()
         .title(" 标签 (逗号/空格分隔，Enter确认) ")
         .borders(Borders::ALL)
         .border_type(BorderType::Rounded)
-        .border_style(border_style);
+        .border_style(theme::border_for_focus(focused));
 
     let inner = block.inner(area);
     frame.render_widget(block, area);
 
-    // 已确认标签 + 正在输入的内容
     let mut spans: Vec<Span> = Vec::new();
     for tag in &app.form.tags {
         let (r, g, b) = tag_color(tag);
@@ -122,16 +98,13 @@ fn render_tags_field(frame: &mut Frame, app: &AppState, area: Rect) {
             Style::default().fg(Color::White),
         ));
     } else if app.form.tags.is_empty() {
-        spans.push(Span::styled(
-            "无标签",
-            Style::default().fg(Color::Rgb(80, 80, 80)),
-        ));
+        spans.push(Span::styled("无标签", Style::default().fg(theme::FG_MUTED)));
     }
 
     frame.render_widget(Paragraph::new(Line::from(spans)), inner);
 }
 
-fn render_field(
+fn render_text_field(
     frame: &mut Frame,
     label: &str,
     value: &str,
@@ -139,19 +112,12 @@ fn render_field(
     error: Option<&str>,
     area: Rect,
 ) {
-    let border_style = if focused {
-        Style::default().fg(Color::Cyan)
-    } else {
-        Style::default().fg(Color::Rgb(80, 80, 80))
-    };
-
-    let title = if let Some(err) = error {
-        format!(" {} — {} ", label, err)
-    } else {
-        format!(" {} ", label)
+    let title = match error {
+        Some(err) => format!(" {} — {} ", label, err),
+        None => format!(" {} ", label),
     };
     let title_style = if error.is_some() {
-        Style::default().fg(Color::Rgb(220, 80, 80))
+        Style::default().fg(theme::ACTION_ERROR)
     } else {
         Style::default()
     };
@@ -166,17 +132,12 @@ fn render_field(
         .title(Span::styled(title, title_style))
         .borders(Borders::ALL)
         .border_type(BorderType::Rounded)
-        .border_style(border_style);
+        .border_style(theme::border_for_focus(focused));
 
     frame.render_widget(Paragraph::new(display).block(block), area);
 }
 
 fn render_select_field(frame: &mut Frame, label: &str, value: &str, focused: bool, area: Rect) {
-    let border_style = if focused {
-        Style::default().fg(Color::Cyan)
-    } else {
-        Style::default().fg(Color::Rgb(80, 80, 80))
-    };
     let display = if focused {
         format!("◀ {} ▶", value)
     } else {
@@ -186,8 +147,28 @@ fn render_select_field(frame: &mut Frame, label: &str, value: &str, focused: boo
         .title(format!(" {} ", label))
         .borders(Borders::ALL)
         .border_type(BorderType::Rounded)
-        .border_style(border_style);
+        .border_style(theme::border_for_focus(focused));
     frame.render_widget(Paragraph::new(display).block(block), area);
+}
+
+fn hint_line() -> Line<'static> {
+    Line::from(vec![
+        Span::styled("  [Tab] ", Style::default().fg(theme::FG_LABEL)),
+        Span::raw("切换  "),
+        Span::styled("[,/空格] ", Style::default().fg(theme::FG_LABEL)),
+        Span::raw("确认标签  "),
+        Span::styled("[↑↓] ", Style::default().fg(theme::FG_LABEL)),
+        Span::raw("切换优先级  "),
+        Span::styled(
+            "[Enter] ",
+            Style::default()
+                .fg(theme::ACTION_CONFIRM)
+                .add_modifier(Modifier::BOLD),
+        ),
+        Span::raw("提交  "),
+        Span::styled("[Esc] ", Style::default().fg(theme::ACTION_CANCEL)),
+        Span::raw("取消"),
+    ])
 }
 
 fn priority_label(p: &Priority) -> &'static str {

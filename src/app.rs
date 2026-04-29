@@ -42,6 +42,7 @@ pub struct AppState {
 }
 
 impl AppState {
+    /// 初始化状态，从 storage 加载全部 todo 和标签列表。
     pub fn new(storage: Storage) -> Result<Self> {
         let todos = storage.list_todos()?;
         let all_tags = storage.list_all_tags()?;
@@ -61,6 +62,7 @@ impl AppState {
         })
     }
 
+    /// 返回经标签过滤和搜索关键词过滤后的 todo 列表。
     pub fn filtered_todos(&self) -> Vec<&Todo> {
         let tag_filter = self.selected_tag.as_deref();
         let search = if self.search_query.is_empty() {
@@ -85,17 +87,19 @@ impl AppState {
             .collect()
     }
 
+    /// 返回当前高亮的 todo（在过滤后列表中）。
     pub fn selected_todo(&self) -> Option<&Todo> {
         self.filtered_todos().get(self.selected_index).copied()
     }
 
-    // 左侧面板条目：["全部", tag1, tag2, ...]
+    /// 返回标签面板条目列表：第一项为 `None`（全部），其余为标签名。
     pub fn tag_panel_items(&self) -> Vec<Option<&str>> {
         let mut items: Vec<Option<&str>> = vec![None]; // None = 全部
         items.extend(self.all_tags.iter().map(|t| Some(t.as_str())));
         items
     }
 
+    /// 处理键盘事件，返回 `AppAction::Quit` 表示退出，否则返回 `Continue`。
     pub fn handle_event(&mut self, event: KeyEvent) -> Result<AppAction> {
         self.error_message = None;
         match self.mode.clone() {

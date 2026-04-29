@@ -3,6 +3,7 @@ mod form;
 mod help;
 mod list;
 mod tags;
+pub mod theme;
 
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
@@ -82,7 +83,7 @@ fn render_title_bar(frame: &mut Frame, app: &AppState, area: Rect) {
         Span::styled(hints, Style::default().fg(Color::DarkGray)),
     ]);
     frame.render_widget(
-        Paragraph::new(line).style(Style::default().bg(Color::Rgb(30, 60, 100))),
+        Paragraph::new(line).style(Style::default().bg(theme::BG_TITLEBAR)),
         area,
     );
 }
@@ -104,8 +105,8 @@ fn render_status_bar(frame: &mut Frame, app: &AppState, area: Rect) {
     frame.render_widget(
         Paragraph::new(hints).style(
             Style::default()
-                .bg(Color::Rgb(40, 40, 40))
-                .fg(Color::Rgb(180, 180, 180)),
+                .bg(theme::BG_STATUSBAR)
+                .fg(theme::FG_STATUSBAR),
         ),
         area,
     );
@@ -135,13 +136,15 @@ fn render_delete_confirm(frame: &mut Frame, app: &AppState, area: Rect) {
             Span::styled(
                 "  [y/Enter] ",
                 Style::default()
-                    .fg(Color::Green)
+                    .fg(theme::ACTION_CONFIRM)
                     .add_modifier(Modifier::BOLD),
             ),
             Span::raw("确认  "),
             Span::styled(
                 "[n/Esc] ",
-                Style::default().fg(Color::Red).add_modifier(Modifier::BOLD),
+                Style::default()
+                    .fg(theme::ACTION_CANCEL)
+                    .add_modifier(Modifier::BOLD),
             ),
             Span::raw("取消"),
         ]),
@@ -149,6 +152,7 @@ fn render_delete_confirm(frame: &mut Frame, app: &AppState, area: Rect) {
     frame.render_widget(Paragraph::new(lines), inner);
 }
 
+/// 计算居中弹窗的 Rect，宽度为父区域百分比，高度固定。
 pub fn centered_rect(percent_x: u16, height: u16, r: Rect) -> Rect {
     let popup_width = r.width * percent_x / 100;
     let x = r.x + (r.width.saturating_sub(popup_width)) / 2;

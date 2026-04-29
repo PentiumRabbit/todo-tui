@@ -10,6 +10,7 @@ pub struct Storage {
 }
 
 impl Storage {
+    /// 打开（或创建）数据库并执行版本化迁移。
     pub fn new(db_path: &Path) -> Result<Self> {
         if let Some(parent) = db_path.parent() {
             std::fs::create_dir_all(parent)?;
@@ -89,6 +90,7 @@ impl Storage {
         Ok(())
     }
 
+    /// 插入新 todo，同步标签后返回完整 `Todo` 对象。
     pub fn insert_todo(&self, new_todo: &NewTodo) -> Result<Todo> {
         let created_at = chrono::Local::now().format("%Y-%m-%dT%H:%M:%S").to_string();
         self.conn.execute(
@@ -114,6 +116,7 @@ impl Storage {
         })
     }
 
+    /// 更新 todo 的全部字段并同步标签。
     pub fn update_todo(&self, todo: &Todo) -> Result<()> {
         self.conn.execute(
             "UPDATE todos SET title=?1, status=?2, priority=?3, due_date=?4 WHERE id=?5",
@@ -172,12 +175,14 @@ impl Storage {
             .collect())
     }
 
+    /// 删除指定 todo（关联的 todo_tags 通过外键级联删除）。
     pub fn delete_todo(&self, id: i64) -> Result<()> {
         self.conn
             .execute("DELETE FROM todos WHERE id=?1", params![id])?;
         Ok(())
     }
 
+    /// 返回全部 todo，按状态（Pending 优先）和优先级排序，同时填充标签。
     pub fn list_todos(&self) -> Result<Vec<Todo>> {
         let mut stmt = self.conn.prepare(
             "SELECT id, title, status, priority, due_date, created_at
@@ -229,6 +234,7 @@ impl Storage {
         Ok(todos)
     }
 
+    /// 返回所有标签名，按字母排序。
     pub fn list_all_tags(&self) -> Result<Vec<String>> {
         let mut stmt = self.conn.prepare("SELECT name FROM tags ORDER BY name")?;
         let tags = stmt

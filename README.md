@@ -49,7 +49,13 @@ curl -L https://github.com/PentiumRabbit/todo-tui/releases/latest/download/todo-
 sudo mv todo-tui /usr/local/bin/
 ```
 
-**Ubuntu / Linux (x86_64)**
+**Ubuntu / Linux (x86_64) — `.deb` package**
+```bash
+curl -LO https://github.com/PentiumRabbit/todo-tui/releases/latest/download/todo-tui_0.1.0_amd64.deb
+sudo dpkg -i todo-tui_0.1.0_amd64.deb
+```
+
+**Ubuntu / Linux (x86_64) — binary**
 ```bash
 curl -L https://github.com/PentiumRabbit/todo-tui/releases/latest/download/todo-tui-x86_64-unknown-linux-gnu.tar.gz | tar xz
 sudo mv todo-tui /usr/local/bin/

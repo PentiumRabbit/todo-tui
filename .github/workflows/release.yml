@@ -41,7 +41,7 @@ jobs:
       - name: Build
         run: cargo build --release --target ${{ matrix.target }}
 
-      - name: Package
+      - name: Package tar.gz
         shell: bash
         run: |
           BIN=target/${{ matrix.target }}/release/todo-tui
@@ -55,9 +55,43 @@ jobs:
           name: ${{ matrix.artifact }}
           path: ${{ env.ARCHIVE }}
 
+  deb:
+    name: Build .deb (Ubuntu x86_64)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4.2.2
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-unknown-linux-gnu
+
+      - name: Cache dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: deb-x86_64
+
+      - name: Install cargo-deb
+        run: cargo install cargo-deb --locked
+
+      - name: Build .deb
+        run: cargo deb --target x86_64-unknown-linux-gnu
+
+      - name: Locate .deb
+        run: |
+          DEB=$(find target/x86_64-unknown-linux-gnu/debian -name "*.deb" | head -1)
+          echo "DEB=$DEB" >> $GITHUB_ENV
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: deb-package
+          path: ${{ env.DEB }}
+
   release:
     name: Publish Release
-    needs: build
+    needs: [build, deb]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -74,5 +108,7 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: artifacts/*.tar.gz
+          files: |
+            artifacts/*.tar.gz
+            artifacts/*.deb
           generate_release_notes: true

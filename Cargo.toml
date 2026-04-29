@@ -2,6 +2,22 @@
 name = "todo-tui"
 version = "0.1.0"
 edition = "2021"
+description = "A keyboard-driven terminal todo manager"
+license = "MIT"
+homepage = "https://github.com/PentiumRabbit/todo-tui"
+repository = "https://github.com/PentiumRabbit/todo-tui"
+
+[package.metadata.deb]
+maintainer = "PentiumRabbit"
+copyright = "2026, PentiumRabbit"
+license-file = ["LICENSE", "0"]
+extended-description = "Keyboard-driven terminal todo manager built with Rust and ratatui. Supports tags, priorities, due dates, and SQLite persistence."
+depends = "$auto"
+section = "utils"
+priority = "optional"
+assets = [
+    ["target/x86_64-unknown-linux-gnu/release/todo-tui", "usr/bin/", "755"],
+]
 
 [[bin]]
 name = "todo-tui"

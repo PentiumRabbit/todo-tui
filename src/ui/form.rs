@@ -12,10 +12,11 @@ use crate::ui::{centered_rect, theme};
 
 /// 渲染添加/编辑 Todo 表单弹窗。
 pub fn render_form(frame: &mut Frame, app: &AppState, area: Rect) {
+    let t = app.t();
     let title = if app.mode == AppMode::Add {
-        " 添加 Todo "
+        t.form_add_title()
     } else {
-        " 编辑 Todo "
+        t.form_edit_title()
     };
 
     let popup = centered_rect(65, 20, area);
@@ -46,7 +47,7 @@ pub fn render_form(frame: &mut Frame, app: &AppState, area: Rect) {
 
     render_text_field(
         frame,
-        "标题",
+        t.form_field_title(),
         &app.form.title,
         app.form.focused_field == FormField::Title,
         app.form.title_error.as_deref(),
@@ -54,36 +55,36 @@ pub fn render_form(frame: &mut Frame, app: &AppState, area: Rect) {
     );
     render_text_field(
         frame,
-        "备注",
+        t.form_field_notes(),
         &app.form.notes,
         app.form.focused_field == FormField::Notes,
         None,
         rows[2],
     );
-    render_tags_field(frame, app, rows[3]);
+    render_tags_field(frame, app, &t, rows[3]);
     render_select_field(
         frame,
-        "优先级",
-        priority_label(&app.form.priority),
+        t.form_field_priority(),
+        priority_label(&app.form.priority, &t),
         app.form.focused_field == FormField::Priority,
         rows[4],
     );
     render_text_field(
         frame,
-        "截止日期",
+        t.form_field_due_date(),
         &app.form.due_date,
         app.form.focused_field == FormField::DueDate,
         app.form.due_date_error.as_deref(),
         rows[5],
     );
 
-    frame.render_widget(Paragraph::new(hint_line()), rows[7]);
+    frame.render_widget(Paragraph::new(hint_line(&t)), rows[7]);
 }
 
-fn render_tags_field(frame: &mut Frame, app: &AppState, area: Rect) {
+fn render_tags_field(frame: &mut Frame, app: &AppState, t: &crate::i18n::T, area: Rect) {
     let focused = app.form.focused_field == FormField::Tags;
     let block = Block::default()
-        .title(" 标签 (逗号/空格分隔，Enter确认) ")
+        .title(t.form_field_tags())
         .borders(Borders::ALL)
         .border_type(BorderType::Rounded)
         .border_style(theme::border_for_focus(focused));
@@ -107,7 +108,7 @@ fn render_tags_field(frame: &mut Frame, app: &AppState, area: Rect) {
             Style::default().fg(Color::White),
         ));
     } else if app.form.tags.is_empty() {
-        spans.push(Span::styled("无标签", Style::default().fg(theme::FG_MUTED)));
+        spans.push(Span::styled(t.form_no_tags(), Style::default().fg(theme::FG_MUTED)));
     }
 
     frame.render_widget(Paragraph::new(Line::from(spans)), inner);
@@ -160,30 +161,27 @@ fn render_select_field(frame: &mut Frame, label: &str, value: &str, focused: boo
     frame.render_widget(Paragraph::new(display).block(block), area);
 }
 
-fn hint_line() -> Line<'static> {
-    Line::from(vec![
-        Span::styled("  [Tab] ", Style::default().fg(theme::FG_LABEL)),
-        Span::raw("切换  "),
-        Span::styled("[,/空格] ", Style::default().fg(theme::FG_LABEL)),
-        Span::raw("确认标签  "),
-        Span::styled("[↑↓] ", Style::default().fg(theme::FG_LABEL)),
-        Span::raw("切换优先级  "),
-        Span::styled(
-            "[Enter] ",
-            Style::default()
-                .fg(theme::ACTION_CONFIRM)
-                .add_modifier(Modifier::BOLD),
-        ),
-        Span::raw("提交  "),
-        Span::styled("[Esc] ", Style::default().fg(theme::ACTION_CANCEL)),
-        Span::raw("取消"),
-    ])
+fn hint_line(t: &crate::i18n::T) -> Line<'static> {
+    let entries = t.form_hint();
+    let mut spans = vec![Span::raw("  ")];
+    for (i, (key, desc)) in entries.iter().enumerate() {
+        let key_style = if i == 3 {
+            Style::default().fg(theme::ACTION_CONFIRM).add_modifier(Modifier::BOLD)
+        } else if i == 4 {
+            Style::default().fg(theme::ACTION_CANCEL)
+        } else {
+            Style::default().fg(theme::FG_LABEL)
+        };
+        spans.push(Span::styled(key.to_string(), key_style));
+        spans.push(Span::raw(desc.to_string()));
+    }
+    Line::from(spans)
 }
 
-fn priority_label(p: &Priority) -> &'static str {
+fn priority_label<'a>(p: &Priority, t: &'a crate::i18n::T) -> &'a str {
     match p {
-        Priority::High => "高",
-        Priority::Medium => "中",
-        Priority::Low => "低",
+        Priority::High => t.priority_high(),
+        Priority::Medium => t.priority_medium(),
+        Priority::Low => t.priority_low(),
     }
 }

@@ -1,4 +1,6 @@
 mod app;
+mod config;
+mod i18n;
 mod models;
 mod storage;
 mod ui;
@@ -15,6 +17,7 @@ use std::path::PathBuf;
 use std::time::Duration;
 
 use app::AppState;
+use config::Config;
 use storage::Storage;
 
 fn db_path() -> PathBuf {
@@ -34,7 +37,8 @@ fn main() -> Result<()> {
     }));
 
     let storage = Storage::new(&db_path())?;
-    let mut app = AppState::new(storage)?;
+    let cfg = Config::load()?;
+    let mut app = AppState::new(storage, cfg)?;
 
     enable_raw_mode()?;
     let mut stdout = io::stdout();

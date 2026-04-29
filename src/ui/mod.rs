@@ -21,7 +21,7 @@ pub fn render(frame: &mut Frame, app: &AppState) -> (Rect, Rect) {
     let size = frame.area();
 
     if size.width < 80 || size.height < 24 {
-        let msg = Paragraph::new("终端太小，请调整至 80×24 以上")
+        let msg = Paragraph::new(app.t().terminal_too_small())
             .style(Style::default().fg(Color::Red).add_modifier(Modifier::BOLD))
             .block(
                 Block::default()
@@ -52,7 +52,7 @@ pub fn render(frame: &mut Frame, app: &AppState) -> (Rect, Rect) {
         AppMode::Detail => detail::render_detail_popup(frame, app, size),
         AppMode::Add | AppMode::Edit => form::render_form(frame, app, size),
         AppMode::DeleteConfirm => render_delete_confirm(frame, app, size),
-        AppMode::Help => help::render_help(frame, size),
+        AppMode::Help => help::render_help(frame, app, size),
         _ => {}
     }
 
@@ -60,21 +60,19 @@ pub fn render(frame: &mut Frame, app: &AppState) -> (Rect, Rect) {
 }
 
 fn render_status_bar(frame: &mut Frame, app: &AppState, area: Rect) {
+    let t = app.t();
     let search_hint;
     let sort_hint;
     let hints = if app.focus_tag_panel {
-        " [l/→/Tab] 列表  [j/k] 移动  [g/G] 顶/底  [Enter] 选择  [q] 退出"
+        t.statusbar_tag_panel()
     } else {
         match app.mode {
             AppMode::Normal => {
-                sort_hint = format!(
-                    " [h/←/Tab] 过滤栏  [a] 添加  [e] 编辑  [d] 删除  [Space] 完成  [x] 取消  [/] 搜索  [s] 排序:{}  [?] 帮助  [q] 退出",
-                    app.sort_order.label()
-                );
+                sort_hint = t.statusbar_normal(app.sort_order.label(&t));
                 &sort_hint
             }
             AppMode::Search => {
-                search_hint = format!(" 搜索: {}█  [Esc] 退出", app.search_query);
+                search_hint = t.statusbar_search(&app.search_query);
                 &search_hint
             }
             _ => "",
@@ -91,14 +89,16 @@ fn render_status_bar(frame: &mut Frame, app: &AppState, area: Rect) {
 }
 
 fn render_delete_confirm(frame: &mut Frame, app: &AppState, area: Rect) {
+    let t = app.t();
     let title = app.selected_todo().map(|t| t.title.as_str()).unwrap_or("");
-    let msg = format!("确定要删除 \"{}\" 吗？", title);
+    let msg = t.delete_confirm_msg(title);
+    let (confirm_label, cancel_label) = t.delete_confirm_hint();
 
     let popup = centered_rect(60, 7, area);
     frame.render_widget(Clear, popup);
 
     let block = Block::default()
-        .title(" 确认删除 ")
+        .title(t.delete_confirm_title())
         .borders(Borders::ALL)
         .border_type(BorderType::Rounded)
         .border_style(Style::default().fg(Color::Red));
@@ -108,23 +108,21 @@ fn render_delete_confirm(frame: &mut Frame, app: &AppState, area: Rect) {
 
     let lines = vec![
         Line::from(""),
-        Line::from(Span::styled(&msg, Style::default().fg(Color::White))),
+        Line::from(Span::styled(msg, Style::default().fg(Color::White))),
         Line::from(""),
         Line::from(vec![
             Span::styled(
-                "  [y/Enter] ",
+                confirm_label,
                 Style::default()
                     .fg(theme::ACTION_CONFIRM)
                     .add_modifier(Modifier::BOLD),
             ),
-            Span::raw("确认  "),
             Span::styled(
-                "[n/Esc] ",
+                cancel_label,
                 Style::default()
                     .fg(theme::ACTION_CANCEL)
                     .add_modifier(Modifier::BOLD),
             ),
-            Span::raw("取消"),
         ]),
     ];
     frame.render_widget(Paragraph::new(lines), inner);

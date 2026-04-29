@@ -16,11 +16,12 @@ pub fn render_detail_popup(frame: &mut Frame, app: &AppState, area: Rect) {
         return;
     };
 
+    let t = app.t();
     let popup = centered_rect(70, 20, area);
     frame.render_widget(Clear, popup);
 
     let block = Block::default()
-        .title(" 详情 ")
+        .title(t.detail_title())
         .borders(Borders::ALL)
         .border_type(BorderType::Rounded)
         .border_style(theme::border_active());
@@ -28,11 +29,11 @@ pub fn render_detail_popup(frame: &mut Frame, app: &AppState, area: Rect) {
     let inner = block.inner(popup);
     frame.render_widget(block, popup);
 
-    let lines = build_detail_lines(todo);
+    let lines = build_detail_lines(todo, &t);
     frame.render_widget(Paragraph::new(lines).wrap(Wrap { trim: false }), inner);
 }
 
-fn build_detail_lines(todo: &Todo) -> Vec<Line<'static>> {
+fn build_detail_lines<'a>(todo: &'a Todo, t: &'a crate::i18n::T) -> Vec<Line<'a>> {
     let label = Style::default().fg(theme::FG_LABEL);
     let value = Style::default().fg(theme::FG_VALUE);
     let bold = Style::default()
@@ -41,34 +42,34 @@ fn build_detail_lines(todo: &Todo) -> Vec<Line<'static>> {
     let divider_style = Style::default().fg(theme::FG_DIVIDER);
     let divider_text = "  ─────────────────────────────────────";
 
-    let (status_text, status_style) = status_display(todo);
-    let (priority_icon, priority_style) = priority_display(&todo.priority);
+    let (status_text, status_style) = status_display(todo, t);
+    let (priority_icon, priority_style) = priority_display(&todo.priority, t);
 
     let mut lines = vec![
         Line::from(""),
         Line::from(vec![
-            Span::styled("  标题:      ", label),
+            Span::styled(t.detail_label_title(), label),
             Span::styled(todo.title.clone(), bold),
         ]),
         Line::from(""),
         Line::from(Span::styled(divider_text, divider_style)),
         Line::from(""),
         Line::from(vec![
-            Span::styled("  状态:      ", label),
+            Span::styled(t.detail_label_status(), label),
             Span::styled(status_text, status_style),
         ]),
         Line::from(vec![
-            Span::styled("  优先级:    ", label),
+            Span::styled(t.detail_label_priority(), label),
             Span::styled(priority_icon, priority_style),
         ]),
-        tag_line(todo, label),
-        due_line(todo, label, value),
+        tag_line(todo, label, t),
+        due_line(todo, label, value, t),
     ];
 
     if let Some(notes) = todo.notes.as_deref() {
         if !notes.is_empty() {
             lines.push(Line::from(vec![
-                Span::styled("  备注:      ", label),
+                Span::styled(t.detail_label_notes(), label),
                 Span::styled(notes.to_string(), value),
             ]));
         }
@@ -79,7 +80,7 @@ fn build_detail_lines(todo: &Todo) -> Vec<Line<'static>> {
         Line::from(Span::styled(divider_text, divider_style)),
         Line::from(""),
         Line::from(vec![
-            Span::styled("  创建时间:  ", label),
+            Span::styled(t.detail_label_created(), label),
             Span::styled(
                 todo.created_at.replace('T', " "),
                 Style::default().fg(theme::FG_MUTED),
@@ -87,7 +88,7 @@ fn build_detail_lines(todo: &Todo) -> Vec<Line<'static>> {
         ]),
         Line::from(""),
         Line::from(vec![Span::styled(
-            "  [Esc] 关闭  [e] 编辑  [d] 删除  [Space] 切换完成",
+            t.detail_hint(),
             Style::default().fg(theme::FG_HINT),
         )]),
     ]);
@@ -95,39 +96,39 @@ fn build_detail_lines(todo: &Todo) -> Vec<Line<'static>> {
     lines
 }
 
-fn status_display(todo: &Todo) -> (&'static str, Style) {
+fn status_display<'a>(todo: &Todo, t: &'a crate::i18n::T) -> (&'a str, Style) {
     match todo.status {
         TodoStatus::Pending if todo.is_overdue() => (
-            "□ 未完成（已过期）",
+            t.status_pending_overdue(),
             Style::default().fg(theme::STATUS_OVERDUE),
         ),
-        TodoStatus::Pending => ("□ 未完成", Style::default().fg(theme::STATUS_PENDING)),
-        TodoStatus::Done => ("✓ 已完成", Style::default().fg(theme::STATUS_DONE)),
-        TodoStatus::Cancelled => ("✗ 已取消", Style::default().fg(theme::STATUS_CANCELLED)),
+        TodoStatus::Pending => (t.status_pending(), Style::default().fg(theme::STATUS_PENDING)),
+        TodoStatus::Done => (t.status_done(), Style::default().fg(theme::STATUS_DONE)),
+        TodoStatus::Cancelled => (t.status_cancelled(), Style::default().fg(theme::STATUS_CANCELLED)),
     }
 }
 
-fn priority_display(priority: &Priority) -> (&'static str, Style) {
+fn priority_display<'a>(priority: &Priority, t: &'a crate::i18n::T) -> (&'a str, Style) {
     match priority {
         Priority::High => (
-            "▲ 高",
+            t.priority_high(),
             Style::default()
                 .fg(theme::PRIORITY_HIGH)
                 .add_modifier(Modifier::BOLD),
         ),
-        Priority::Medium => ("● 中", Style::default().fg(theme::PRIORITY_MEDIUM)),
-        Priority::Low => ("▼ 低", Style::default().fg(theme::PRIORITY_LOW)),
+        Priority::Medium => (t.priority_medium(), Style::default().fg(theme::PRIORITY_MEDIUM)),
+        Priority::Low => (t.priority_low(), Style::default().fg(theme::PRIORITY_LOW)),
     }
 }
 
-fn tag_line(todo: &Todo, label: Style) -> Line<'static> {
+fn tag_line(todo: &Todo, label: Style, t: &crate::i18n::T) -> Line<'static> {
     if todo.tags.is_empty() {
         Line::from(vec![
-            Span::styled("  标签:      ", label),
-            Span::styled("无", Style::default().fg(theme::FG_MUTED)),
+            Span::styled(t.detail_label_tags(), label),
+            Span::styled(t.detail_no_tags(), Style::default().fg(theme::FG_MUTED)),
         ])
     } else {
-        let mut spans = vec![Span::styled("  标签:      ", label)];
+        let mut spans = vec![Span::styled(t.detail_label_tags(), label)];
         for tag in &todo.tags {
             let (r, g, b) = tag_color(tag);
             spans.push(Span::styled(
@@ -141,29 +142,29 @@ fn tag_line(todo: &Todo, label: Style) -> Line<'static> {
     }
 }
 
-fn due_line(todo: &Todo, label: Style, value: Style) -> Line<'static> {
+fn due_line(todo: &Todo, label: Style, value: Style, t: &crate::i18n::T) -> Line<'static> {
     let Some(d) = todo.due_date.clone() else {
         return Line::from(vec![
-            Span::styled("  截止日期:  ", label),
-            Span::styled("未设置", Style::default().fg(theme::FG_MUTED)),
+            Span::styled(t.detail_label_due(), label),
+            Span::styled(t.detail_no_due(), Style::default().fg(theme::FG_MUTED)),
         ]);
     };
 
     if todo.is_overdue() {
         Line::from(vec![
-            Span::styled("  截止日期:  ", label),
+            Span::styled(t.detail_label_due(), label),
             Span::styled(d, theme::style_overdue_bold()),
-            Span::styled("  ⚠ 已过期", Style::default().fg(theme::STATUS_OVERDUE)),
+            Span::styled(t.detail_overdue_suffix(), Style::default().fg(theme::STATUS_OVERDUE)),
         ])
     } else if todo.is_due_today() {
         Line::from(vec![
-            Span::styled("  截止日期:  ", label),
+            Span::styled(t.detail_label_due(), label),
             Span::styled(d, theme::style_due_today_bold()),
-            Span::styled("  ⚠ 今天到期", Style::default().fg(theme::STATUS_DUE_TODAY)),
+            Span::styled(t.detail_due_today_suffix(), Style::default().fg(theme::STATUS_DUE_TODAY)),
         ])
     } else {
         Line::from(vec![
-            Span::styled("  截止日期:  ", label),
+            Span::styled(t.detail_label_due(), label),
             Span::styled(d, value),
         ])
     }

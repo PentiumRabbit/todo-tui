@@ -3,6 +3,8 @@ use chrono::NaiveDate;
 use crossterm::event::{KeyCode, KeyEvent, MouseButton, MouseEvent, MouseEventKind};
 use ratatui::layout::Rect;
 
+use crate::config::Config;
+use crate::i18n::T;
 use crate::models::{
     AppAction, AppMode, FormField, FormState, NewTodo, Priority, Todo, TodoStatus,
 };
@@ -52,12 +54,12 @@ impl SortOrder {
         }
     }
 
-    pub fn label(&self) -> &'static str {
+    pub fn label<'a>(&self, t: &'a T) -> &'a str {
         match self {
-            SortOrder::Default => "默认排序",
-            SortOrder::ByPriority => "按优先级",
-            SortOrder::ByDueDate => "按截止日",
-            SortOrder::ByCreatedAt => "按创建时间",
+            SortOrder::Default => t.sort_default(),
+            SortOrder::ByPriority => t.sort_priority(),
+            SortOrder::ByDueDate => t.sort_due_date(),
+            SortOrder::ByCreatedAt => t.sort_created_at(),
         }
     }
 }
@@ -76,12 +78,17 @@ pub struct AppState {
     pub search_query: String,
     pub form: FormState,
     pub error_message: Option<String>,
+    pub config: Config,
     storage: Storage,
 }
 
 impl AppState {
+    pub fn t(&self) -> T {
+        T::new(&self.config.lang)
+    }
+
     /// 初始化状态，从 storage 加载全部 todo 和标签列表。
-    pub fn new(storage: Storage) -> Result<Self> {
+    pub fn new(storage: Storage, config: Config) -> Result<Self> {
         let todos = storage.list_todos()?;
         let all_tags = storage.list_all_tags()?;
         Ok(Self {
@@ -97,6 +104,7 @@ impl AppState {
             search_query: String::new(),
             form: FormState::default(),
             error_message: None,
+            config,
             storage,
         })
     }
@@ -238,6 +246,9 @@ impl AppState {
             }
             KeyCode::Tab | KeyCode::Left | KeyCode::Char('h') => {
                 self.focus_tag_panel = true;
+            }
+            KeyCode::Char('L') => {
+                self.config.toggle_lang()?;
             }
             _ => {}
         }
@@ -427,7 +438,7 @@ impl AppState {
     fn submit_form(&mut self) -> Result<()> {
         let title = self.form.title.trim().to_string();
         if title.is_empty() {
-            self.form.title_error = Some("标题不能为空".to_string());
+            self.form.title_error = Some(self.t().form_title_empty_error().to_string());
             self.form.focused_field = FormField::Title;
             return Ok(());
         }
@@ -438,7 +449,8 @@ impl AppState {
             match self.form.due_date.parse::<NaiveDate>() {
                 Ok(_) => Some(self.form.due_date.clone()),
                 Err(_) => {
-                    self.form.due_date_error = Some("格式应为 YYYY-MM-DD".to_string());
+                    self.form.due_date_error =
+                        Some(self.t().form_date_format_error().to_string());
                     self.form.focused_field = FormField::DueDate;
                     return Ok(());
                 }
@@ -703,15 +715,15 @@ impl PanelItem {
         }
     }
 
-    pub fn label(&self) -> &str {
+    pub fn label<'a>(&'a self, t: &'a T) -> &'a str {
         match self {
-            PanelItem::All => "全部",
-            PanelItem::Status(TodoStatus::Pending) => "未完成",
-            PanelItem::Status(TodoStatus::Done) => "已完成",
-            PanelItem::Status(TodoStatus::Cancelled) => "已取消",
-            PanelItem::DueToday => "今日到期",
-            PanelItem::Overdue => "已逾期",
-            PanelItem::Tag(t) => t.as_str(),
+            PanelItem::All => t.filter_all(),
+            PanelItem::Status(TodoStatus::Pending) => t.filter_pending(),
+            PanelItem::Status(TodoStatus::Done) => t.filter_done(),
+            PanelItem::Status(TodoStatus::Cancelled) => t.filter_cancelled(),
+            PanelItem::DueToday => t.filter_due_today(),
+            PanelItem::Overdue => t.filter_overdue(),
+            PanelItem::Tag(tag) => tag.as_str(),
         }
     }
 
@@ -765,6 +777,10 @@ mod tests {
             search_query: String::new(),
             form: crate::models::FormState::default(),
             error_message: None,
+            config: crate::config::Config::load().unwrap_or_else(|_| crate::config::Config {
+                lang: crate::config::Lang::En,
+                path: std::path::PathBuf::from("/tmp/test-config.toml"),
+            }),
             storage,
         }
     }

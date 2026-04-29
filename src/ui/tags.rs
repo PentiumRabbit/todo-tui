@@ -11,8 +11,9 @@ use crate::ui::theme;
 
 /// 渲染左侧标签侧边栏。
 pub fn render_tag_panel(frame: &mut Frame, app: &AppState, area: Rect) {
+    let t = app.t();
     let block = Block::default()
-        .title(" 过滤 ")
+        .title(t.panel_title())
         .borders(Borders::ALL)
         .border_type(BorderType::Rounded)
         .border_style(theme::border_for_focus(app.focus_tag_panel));
@@ -20,7 +21,7 @@ pub fn render_tag_panel(frame: &mut Frame, app: &AppState, area: Rect) {
     let items: Vec<ListItem> = app
         .tag_panel_items()
         .iter()
-        .map(|item| build_item(item, app))
+        .map(|item| build_item(item, app, &t))
         .collect();
 
     let mut state = ListState::default();
@@ -38,17 +39,17 @@ pub fn render_tag_panel(frame: &mut Frame, app: &AppState, area: Rect) {
     frame.render_stateful_widget(list, area, &mut state);
 }
 
-fn build_item(item: &PanelItem, app: &AppState) -> ListItem<'static> {
+fn build_item(item: &PanelItem, app: &AppState, t: &crate::i18n::T) -> ListItem<'static> {
     let is_selected = item.to_filter() == app.filter;
 
     if item.is_builtin() {
-        builtin_item(item, is_selected)
+        builtin_item(item, is_selected, t)
     } else {
-        tag_item(item, is_selected)
+        tag_item(item, is_selected, t)
     }
 }
 
-fn builtin_item(item: &PanelItem, is_selected: bool) -> ListItem<'static> {
+fn builtin_item(item: &PanelItem, is_selected: bool, t: &crate::i18n::T) -> ListItem<'static> {
     let (icon, color) = match item {
         PanelItem::All => ("◈", Color::White),
         PanelItem::Status(crate::models::TodoStatus::Pending) => ("□", theme::STATUS_PENDING),
@@ -59,7 +60,7 @@ fn builtin_item(item: &PanelItem, is_selected: bool) -> ListItem<'static> {
         PanelItem::Tag(_) => unreachable!(),
     };
 
-    let label = item.label().to_string();
+    let label = item.label(t).to_string();
     let style = if is_selected {
         Style::default().fg(color).add_modifier(Modifier::BOLD)
     } else {
@@ -72,8 +73,8 @@ fn builtin_item(item: &PanelItem, is_selected: bool) -> ListItem<'static> {
     ]))
 }
 
-fn tag_item(item: &PanelItem, is_selected: bool) -> ListItem<'static> {
-    let tag = item.label();
+fn tag_item(item: &PanelItem, is_selected: bool, t: &crate::i18n::T) -> ListItem<'static> {
+    let tag = item.label(t);
     let (r, g, b) = tag_color(tag);
     let tag_style = if is_selected {
         Style::default()

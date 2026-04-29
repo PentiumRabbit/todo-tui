@@ -31,6 +31,30 @@ A keyboard-driven terminal todo manager built with Rust and [ratatui](https://gi
 
 ## Installation / 安装
 
+### Download from Release / 直接下载（推荐）
+
+Go to the [Releases](../../releases) page and download the binary for your platform.
+
+前往 [Releases](../../releases) 页面，下载对应平台的二进制文件。
+
+**macOS (Apple Silicon)**
+```bash
+curl -L https://github.com/PentiumRabbit/todo-tui/releases/latest/download/todo-tui-aarch64-apple-darwin.tar.gz | tar xz
+sudo mv todo-tui /usr/local/bin/
+```
+
+**macOS (Intel)**
+```bash
+curl -L https://github.com/PentiumRabbit/todo-tui/releases/latest/download/todo-tui-x86_64-apple-darwin.tar.gz | tar xz
+sudo mv todo-tui /usr/local/bin/
+```
+
+**Ubuntu / Linux (x86_64)**
+```bash
+curl -L https://github.com/PentiumRabbit/todo-tui/releases/latest/download/todo-tui-x86_64-unknown-linux-gnu.tar.gz | tar xz
+sudo mv todo-tui /usr/local/bin/
+```
+
 ### Build from source / 从源码构建
 
 ```bash
@@ -70,25 +94,26 @@ The data file is created automatically at `~/.todo-tui/todos.db` on first launch
 | `k` / `↑` | Move up / 上移 |
 | `g` / `Home` | Jump to top / 跳到顶部 |
 | `G` / `End` | Jump to bottom / 跳到底部 |
-| `←` / `Tab` | Focus tag panel / 切换到标签面板 |
+| `h` / `←` / `Tab` | Focus filter panel / 切换到过滤栏 |
 | `Enter` | Open detail / 打开详情 |
 | `a` | Add todo / 添加 |
 | `e` | Edit todo / 编辑 |
 | `d` | Delete todo / 删除 |
 | `Space` | Toggle complete / 切换完成状态 |
 | `x` | Cancel todo / 取消 |
+| `s` | Cycle sort order / 切换排序方式 |
 | `/` | Search / 搜索 |
 | `?` | Help / 帮助 |
 | `q` | Quit / 退出 |
 
-### Tag Panel / 标签面板
+### Filter Panel / 过滤栏
 
 | Key / 按键 | Action / 动作 |
 |-----------|--------------|
 | `j` / `↓` | Move down / 下移 |
 | `k` / `↑` | Move up / 上移 |
-| `→` / `Tab` | Focus todo list / 切换回列表 |
-| `Enter` | Select tag filter / 选择标签过滤 |
+| `l` / `→` / `Tab` | Focus todo list / 切换回列表 |
+| `Enter` | Select filter / 选择过滤条件 |
 
 ### Add / Edit Form / 添加编辑表单
 

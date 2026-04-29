@@ -165,14 +165,13 @@ impl AppState {
             KeyCode::Tab | KeyCode::Right => self.focus_tag_panel = false,
             KeyCode::Char('j') | KeyCode::Down if self.tag_panel_index + 1 < items_len => {
                 self.tag_panel_index += 1;
+                self.sync_tag_filter();
             }
             KeyCode::Char('k') | KeyCode::Up if self.tag_panel_index > 0 => {
                 self.tag_panel_index -= 1;
+                self.sync_tag_filter();
             }
             KeyCode::Enter | KeyCode::Char(' ') => {
-                let items = self.tag_panel_items();
-                self.selected_tag = items[self.tag_panel_index].map(|s| s.to_string());
-                self.selected_index = 0;
                 self.focus_tag_panel = false;
             }
             _ => {}
@@ -272,6 +271,12 @@ impl AppState {
             _ => {}
         }
         Ok(AppAction::Continue)
+    }
+
+    fn sync_tag_filter(&mut self) {
+        let items = self.tag_panel_items();
+        self.selected_tag = items[self.tag_panel_index].map(|s| s.to_string());
+        self.selected_index = 0;
     }
 
     fn move_down(&mut self) {

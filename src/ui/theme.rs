@@ -10,7 +10,6 @@ pub const BG_TAG_HIGHLIGHT: Color = Color::Rgb(40, 60, 80);
 
 // ── 文字基础 ──────────────────────────────────────
 pub const FG_STATUSBAR: Color = Color::Rgb(180, 180, 180);
-pub const FG_TEXT: Color = Color::Rgb(230, 230, 230);
 pub const FG_TEXT_DIM: Color = Color::Rgb(110, 110, 110);
 pub const FG_LABEL: Color = Color::Rgb(120, 120, 120);
 pub const FG_VALUE: Color = Color::Rgb(220, 220, 220);
@@ -27,9 +26,9 @@ pub const STATUS_DUE_TODAY: Color = Color::Rgb(220, 180, 60);
 pub const STATUS_PENDING: Color = Color::Rgb(200, 200, 200);
 
 // ── 优先级颜色 ────────────────────────────────────
-pub const PRIORITY_HIGH: Color = Color::Rgb(240, 80, 80);
-pub const PRIORITY_MEDIUM: Color = Color::Rgb(220, 180, 60);
-pub const PRIORITY_LOW: Color = Color::Rgb(80, 180, 80);
+pub const PRIORITY_HIGH: Color = Color::Rgb(200, 80, 80);
+pub const PRIORITY_MEDIUM: Color = Color::Rgb(190, 150, 50);
+pub const PRIORITY_LOW: Color = Color::Rgb(80, 140, 200);
 
 // ── 操作颜色 ──────────────────────────────────────
 pub const ACTION_CONFIRM: Color = Color::Rgb(80, 200, 120);

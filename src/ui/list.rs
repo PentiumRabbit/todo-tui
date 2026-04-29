@@ -54,12 +54,11 @@ pub fn render_list(frame: &mut Frame, app: &AppState, area: Rect) {
 
 fn build_list_item(todo: &Todo, inner_width: usize) -> ListItem<'static> {
     let (icon, icon_style) = status_icon(todo);
-    let (prio_icon, prio_style) = priority_icon(&todo.priority);
     let title_style = title_style(todo);
 
     let (right_spans, right_width) = build_right_spans(todo);
 
-    let left_fixed = 5; // " □ ▲ "
+    let left_fixed = 3; // " □ "
     let title_chars = todo.title.as_str().width();
     let left_width = left_fixed + title_chars;
 
@@ -95,8 +94,6 @@ fn build_list_item(todo: &Todo, inner_width: usize) -> ListItem<'static> {
         Span::raw(" "),
         Span::styled(icon, icon_style),
         Span::raw(" "),
-        Span::styled(prio_icon, prio_style),
-        Span::raw(" "),
         Span::styled(todo.title.clone(), title_style),
     ];
     if let Some(ns) = notes_span {
@@ -113,17 +110,16 @@ fn status_icon(todo: &Todo) -> (&'static str, Style) {
         TodoStatus::Pending if todo.is_overdue() => {
             ("□", Style::default().fg(theme::STATUS_OVERDUE))
         }
-        TodoStatus::Pending => ("□", Style::default().fg(theme::STATUS_PENDING)),
+        TodoStatus::Pending => {
+            let color = match todo.priority {
+                Priority::High => theme::PRIORITY_HIGH,
+                Priority::Medium => theme::PRIORITY_MEDIUM,
+                Priority::Low => theme::PRIORITY_LOW,
+            };
+            ("□", Style::default().fg(color))
+        }
         TodoStatus::Done => ("✓", Style::default().fg(theme::STATUS_DONE)),
         TodoStatus::Cancelled => ("✗", Style::default().fg(theme::STATUS_CANCELLED)),
-    }
-}
-
-fn priority_icon(priority: &Priority) -> (&'static str, Style) {
-    match priority {
-        Priority::High => ("▲", Style::default().fg(theme::PRIORITY_HIGH)),
-        Priority::Medium => ("●", Style::default().fg(theme::PRIORITY_MEDIUM)),
-        Priority::Low => ("▼", Style::default().fg(theme::PRIORITY_LOW)),
     }
 }
 
@@ -131,7 +127,11 @@ fn title_style(todo: &Todo) -> Style {
     match todo.status {
         TodoStatus::Done | TodoStatus::Cancelled => theme::style_done(),
         TodoStatus::Pending if todo.is_overdue() => Style::default().fg(theme::STATUS_OVERDUE),
-        _ => Style::default().fg(theme::FG_TEXT),
+        TodoStatus::Pending => match todo.priority {
+            Priority::High => Style::default().fg(theme::PRIORITY_HIGH),
+            Priority::Medium => Style::default().fg(theme::PRIORITY_MEDIUM),
+            Priority::Low => Style::default().fg(theme::PRIORITY_LOW),
+        },
     }
 }
 

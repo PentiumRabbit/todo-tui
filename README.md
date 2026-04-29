@@ -19,12 +19,14 @@ A keyboard-driven terminal todo manager built with Rust and [ratatui](https://gi
 
 ## Features / 功能特性
 
-- **Tag filtering** — sidebar tag panel with instant filter / **标签过滤** — 侧边栏标签面板，实时过滤
+- **Filter panel** — filter by tag, status (Pending/Done/Cancelled), due today, or overdue / **过滤栏** — 按标签、状态、今日到期、已逾期过滤
 - **Priority levels** — High / Medium / Low with color indicators / **优先级** — 高/中/低，颜色区分
 - **Due dates** — overdue and today's tasks highlighted / **截止日期** — 过期/今日到期自动高亮
+- **Notes** — optional notes field on each todo / **备注** — 每条 todo 支持备注说明
+- **Sort control** — cycle sort by priority / due date / created time / **排序控制** — 按优先级/截止日/创建时间切换
 - **Full CRUD** — add, edit, delete, complete, cancel / **完整增删改查** — 添加、编辑、删除、完成、取消
 - **Persistent storage** — SQLite at `~/.todo-tui/todos.db` / **本地持久化** — SQLite 存储
-- **Search** — real-time keyword filter / **搜索** — 实时关键词过滤
+- **Search** — matches title, tags, and notes in real time / **搜索** — 实时匹配标题、标签、备注
 - **Mouse support** — click and scroll in addition to keyboard / **鼠标支持** — 点击与滚轮
 
 ---
@@ -58,8 +60,8 @@ sudo mv todo-tui /usr/local/bin/
 
 **Ubuntu / Linux (x86_64) — `.deb` package**
 ```bash
-curl -LO https://github.com/PentiumRabbit/todo-tui/releases/latest/download/todo-tui_0.1.0_amd64.deb
-sudo dpkg -i todo-tui_0.1.0_amd64.deb
+curl -LO https://github.com/PentiumRabbit/todo-tui/releases/latest/download/todo-tui_0.1.0-1_amd64.deb
+sudo dpkg -i todo-tui_0.1.0-1_amd64.deb
 ```
 
 **Ubuntu / Linux (x86_64) — binary**
@@ -125,6 +127,8 @@ The data file is created automatically at `~/.todo-tui/todos.db` on first launch
 |-----------|--------------|
 | `j` / `↓` | Move down / 下移 |
 | `k` / `↑` | Move up / 上移 |
+| `g` / `Home` | Jump to top / 跳到顶部 |
+| `G` / `End` | Jump to bottom / 跳到底部 |
 | `l` / `→` / `Tab` | Focus todo list / 切换回列表 |
 | `Enter` | Select filter / 选择过滤条件 |
 

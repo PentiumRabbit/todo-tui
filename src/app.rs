@@ -255,8 +255,12 @@ impl AppState {
                 self.tag_panel_index -= 1;
                 self.sync_filter();
             }
-            KeyCode::Enter | KeyCode::Char(' ') => {
+            KeyCode::Enter => {
                 self.focus_tag_panel = false;
+            }
+            KeyCode::Char('g') | KeyCode::Home => self.tag_panel_index = 0,
+            KeyCode::Char('G') | KeyCode::End => {
+                self.tag_panel_index = self.tag_panel_items().len().saturating_sub(1);
             }
             _ => {}
         }

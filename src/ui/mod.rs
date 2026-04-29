@@ -63,7 +63,7 @@ fn render_status_bar(frame: &mut Frame, app: &AppState, area: Rect) {
     let search_hint;
     let sort_hint;
     let hints = if app.focus_tag_panel {
-        " [l/→/Tab] 列表  [j/k] 移动  [Enter] 选择  [q] 退出"
+        " [l/→/Tab] 列表  [j/k] 移动  [g/G] 顶/底  [Enter] 选择  [q] 退出"
     } else {
         match app.mode {
             AppMode::Normal => {

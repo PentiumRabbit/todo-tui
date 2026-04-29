@@ -56,6 +56,14 @@ pub fn render_help(frame: &mut Frame, area: Rect) {
             Span::styled("    l / → / Tab  ", key),
             Span::styled("切换到 Todo 列表", desc),
         ]),
+        Line::from(vec![
+            Span::styled("    g / Home     ", key),
+            Span::styled("跳到顶部（过滤栏内）", desc),
+        ]),
+        Line::from(vec![
+            Span::styled("    G / End      ", key),
+            Span::styled("跳到底部（过滤栏内）", desc),
+        ]),
         Line::from(""),
         Line::from(Span::styled("  操作", header)),
         Line::from(vec![

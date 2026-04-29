@@ -31,7 +31,14 @@ A keyboard-driven terminal todo manager built with Rust and [ratatui](https://gi
 
 ## Installation / 安装
 
-### Download from Release / 直接下载（推荐）
+### Homebrew (macOS)
+
+```bash
+brew tap PentiumRabbit/tap
+brew install todo-tui
+```
+
+### Download from Release / 直接下载
 
 Go to the [Releases](../../releases) page and download the binary for your platform.
 

@@ -112,3 +112,77 @@ jobs:
             artifacts/*.tar.gz
             artifacts/*.deb
           generate_release_notes: true
+
+  update-homebrew:
+    name: Update Homebrew Formula
+    needs: release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Get version
+        run: echo "VERSION=${GITHUB_REF_NAME#v}" >> $GITHUB_ENV
+
+      - name: Download macOS tarballs
+        run: |
+          curl -fsSL -o arm64.tar.gz \
+            "https://github.com/PentiumRabbit/todo-tui/releases/download/${GITHUB_REF_NAME}/todo-tui-aarch64-apple-darwin.tar.gz"
+          curl -fsSL -o x86_64.tar.gz \
+            "https://github.com/PentiumRabbit/todo-tui/releases/download/${GITHUB_REF_NAME}/todo-tui-x86_64-apple-darwin.tar.gz"
+
+      - name: Compute sha256
+        run: |
+          echo "SHA256_ARM64=$(sha256sum arm64.tar.gz | awk '{print $1}')" >> $GITHUB_ENV
+          echo "SHA256_X86_64=$(sha256sum x86_64.tar.gz | awk '{print $1}')" >> $GITHUB_ENV
+
+      - name: Checkout homebrew-tap
+        uses: actions/checkout@v4.2.2
+        with:
+          repository: PentiumRabbit/homebrew-tap
+          token: ${{ secrets.TAP_GITHUB_TOKEN }}
+          path: homebrew-tap
+
+      - name: Update formula
+        run: |
+          python3 - <<'EOF'
+          import os, textwrap
+          v   = os.environ["VERSION"]
+          a64 = os.environ["SHA256_ARM64"]
+          x64 = os.environ["SHA256_X86_64"]
+          formula = textwrap.dedent(f"""\
+          class TodoTui < Formula
+            desc "Keyboard-driven terminal todo manager built with Rust and ratatui"
+            homepage "https://github.com/PentiumRabbit/todo-tui"
+            version "{v}"
+            license "MIT"
+
+            on_macos do
+              if Hardware::CPU.arm?
+                url "https://github.com/PentiumRabbit/todo-tui/releases/download/v{v}/todo-tui-aarch64-apple-darwin.tar.gz"
+                sha256 "{a64}"
+              else
+                url "https://github.com/PentiumRabbit/todo-tui/releases/download/v{v}/todo-tui-x86_64-apple-darwin.tar.gz"
+                sha256 "{x64}"
+              end
+            end
+
+            def install
+              bin.install "todo-tui"
+            end
+
+            test do
+              assert_match version.to_s, shell_output("\#{{bin}}/todo-tui --version 2>&1", 1)
+            end
+          end
+          """)
+          with open("homebrew-tap/Formula/todo-tui.rb", "w") as f:
+              f.write(formula)
+          EOF
+
+      - name: Commit and push
+        run: |
+          cd homebrew-tap
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Formula/todo-tui.rb
+          git commit -m "chore: update todo-tui to v${VERSION}"
+          git push

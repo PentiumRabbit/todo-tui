@@ -63,11 +63,33 @@ fn build_list_item(todo: &Todo, inner_width: usize) -> ListItem<'static> {
     let title_chars = todo.title.as_str().width();
     let left_width = left_fixed + title_chars;
 
-    let pad = if left_width + right_width + 1 < inner_width {
-        inner_width - left_width - right_width
-    } else {
-        1
-    };
+    // 计算 notes 可用宽度：title 和右侧之间至少留 1 空格分隔
+    let (notes_span, notes_width) =
+        if let Some(notes) = todo.notes.as_deref().filter(|n| !n.is_empty()) {
+            let available = inner_width.saturating_sub(left_width + 2 + right_width);
+            if available >= 4 {
+                let prefix = "  "; // 两空格分隔
+                let budget = available.saturating_sub(prefix.len());
+                let truncated = truncate_to_width(notes, budget);
+                let text = format!("{}{}", prefix, truncated);
+                let w = text.as_str().width();
+                (
+                    Some(Span::styled(
+                        text,
+                        Style::default().fg(theme::FG_TEXT_DIM),
+                    )),
+                    w,
+                )
+            } else {
+                (None, 0)
+            }
+        } else {
+            (None, 0)
+        };
+
+    let pad = inner_width
+        .saturating_sub(left_width + notes_width + right_width)
+        .max(1);
 
     let mut spans = vec![
         Span::raw(" "),
@@ -76,8 +98,11 @@ fn build_list_item(todo: &Todo, inner_width: usize) -> ListItem<'static> {
         Span::styled(prio_icon, prio_style),
         Span::raw(" "),
         Span::styled(todo.title.clone(), title_style),
-        Span::raw(" ".repeat(pad)),
     ];
+    if let Some(ns) = notes_span {
+        spans.push(ns);
+    }
+    spans.push(Span::raw(" ".repeat(pad)));
     spans.extend(right_spans);
 
     ListItem::new(Line::from(spans))
@@ -108,6 +133,36 @@ fn title_style(todo: &Todo) -> Style {
         TodoStatus::Pending if todo.is_overdue() => Style::default().fg(theme::STATUS_OVERDUE),
         _ => Style::default().fg(theme::FG_TEXT),
     }
+}
+
+fn truncate_to_width(s: &str, max_width: usize) -> String {
+    let mut width = 0;
+    let mut end = s.len();
+    let ellipsis = "…";
+    let ellipsis_w = ellipsis.width();
+
+    for (i, ch) in s.char_indices() {
+        let cw = ch.to_string().as_str().width();
+        if width + cw > max_width {
+            // try to fit ellipsis
+            let mut trunc_w = 0;
+            let mut trunc_end = 0;
+            for (j, c) in s.char_indices() {
+                let cw2 = c.to_string().as_str().width();
+                if trunc_w + cw2 + ellipsis_w > max_width {
+                    end = trunc_end;
+                    return format!("{}{}", &s[..end], ellipsis);
+                }
+                trunc_w += cw2;
+                trunc_end = j + c.len_utf8();
+            }
+            end = i;
+            return format!("{}{}", &s[..end], ellipsis);
+        }
+        width += cw;
+        end = i + ch.len_utf8();
+    }
+    s[..end].to_string()
 }
 
 fn build_right_spans(todo: &Todo) -> (Vec<Span<'static>>, usize) {

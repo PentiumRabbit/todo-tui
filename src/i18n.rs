@@ -37,11 +37,11 @@ impl T {
     }
 
     // --- status bar ---
-    pub fn statusbar_normal(&self, sort_label: &str) -> String {
+    pub fn statusbar_normal(&self, _sort_label: &str) -> String {
         if self.zh() {
-            format!(" [h/←/Tab] 过滤栏  [a] 添加  [e] 编辑  [d] 删除  [Space] 完成  [x] 取消  [/] 搜索  [s] 排序:{}  [L] 语言  [?] 帮助  [q] 退出", sort_label)
+            " [a] 添加  [e] 编辑  [d] 删除  [/] 搜索  [s] 排序  [?] 帮助  [q] 退出".to_string()
         } else {
-            format!(" [h/←/Tab] Filter  [a] Add  [e] Edit  [d] Del  [Space] Done  [x] Cancel  [/] Search  [s] Sort:{}  [L] Lang  [?] Help  [q] Quit", sort_label)
+            " [a] Add  [e] Edit  [d] Del  [/] Search  [s] Sort  [?] Help  [q] Quit".to_string()
         }
     }
     pub fn statusbar_tag_panel(&self) -> &'static str {
@@ -57,20 +57,6 @@ impl T {
         } else {
             format!(" Search: {}█  [Esc] Exit", query)
         }
-    }
-
-    // --- sort labels ---
-    pub fn sort_default(&self) -> &'static str {
-        if self.zh() { "默认排序" } else { "Default" }
-    }
-    pub fn sort_priority(&self) -> &'static str {
-        if self.zh() { "按优先级" } else { "Priority" }
-    }
-    pub fn sort_due_date(&self) -> &'static str {
-        if self.zh() { "按截止日" } else { "Due Date" }
-    }
-    pub fn sort_created_at(&self) -> &'static str {
-        if self.zh() { "按创建时间" } else { "Created" }
     }
 
     // --- terminal too small ---

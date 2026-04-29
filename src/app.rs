@@ -54,14 +54,6 @@ impl SortOrder {
         }
     }
 
-    pub fn label<'a>(&self, t: &'a T) -> &'a str {
-        match self {
-            SortOrder::Default => t.sort_default(),
-            SortOrder::ByPriority => t.sort_priority(),
-            SortOrder::ByDueDate => t.sort_due_date(),
-            SortOrder::ByCreatedAt => t.sort_created_at(),
-        }
-    }
 }
 
 pub struct AppState {

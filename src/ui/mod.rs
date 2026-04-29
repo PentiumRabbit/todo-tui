@@ -62,14 +62,14 @@ pub fn render(frame: &mut Frame, app: &AppState) -> (Rect, Rect) {
 fn render_status_bar(frame: &mut Frame, app: &AppState, area: Rect) {
     let t = app.t();
     let search_hint;
-    let sort_hint;
+    let normal_hint;
     let hints = if app.focus_tag_panel {
         t.statusbar_tag_panel()
     } else {
         match app.mode {
             AppMode::Normal => {
-                sort_hint = t.statusbar_normal(app.sort_order.label(&t));
-                &sort_hint
+                normal_hint = t.statusbar_normal("");
+                &normal_hint
             }
             AppMode::Search => {
                 search_hint = t.statusbar_search(&app.search_query);

@@ -44,7 +44,7 @@ fn build_detail_lines(todo: &Todo) -> Vec<Line<'static>> {
     let (status_text, status_style) = status_display(todo);
     let (priority_icon, priority_style) = priority_display(&todo.priority);
 
-    vec![
+    let mut lines = vec![
         Line::from(""),
         Line::from(vec![
             Span::styled("  标题:      ", label),
@@ -63,6 +63,18 @@ fn build_detail_lines(todo: &Todo) -> Vec<Line<'static>> {
         ]),
         tag_line(todo, label),
         due_line(todo, label, value),
+    ];
+
+    if let Some(notes) = todo.notes.as_deref() {
+        if !notes.is_empty() {
+            lines.push(Line::from(vec![
+                Span::styled("  备注:      ", label),
+                Span::styled(notes.to_string(), value),
+            ]));
+        }
+    }
+
+    lines.extend([
         Line::from(""),
         Line::from(Span::styled(divider_text, divider_style)),
         Line::from(""),
@@ -78,7 +90,9 @@ fn build_detail_lines(todo: &Todo) -> Vec<Line<'static>> {
             "  [Esc] 关闭  [e] 编辑  [d] 删除  [Space] 切换完成",
             Style::default().fg(theme::FG_HINT),
         )]),
-    ]
+    ]);
+
+    lines
 }
 
 fn status_display(todo: &Todo) -> (&'static str, Style) {

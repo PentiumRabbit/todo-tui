@@ -18,7 +18,7 @@ pub fn render_form(frame: &mut Frame, app: &AppState, area: Rect) {
         " 编辑 Todo "
     };
 
-    let popup = centered_rect(65, 16, area);
+    let popup = centered_rect(65, 20, area);
     frame.render_widget(Clear, popup);
 
     let block = Block::default()
@@ -35,6 +35,7 @@ pub fn render_form(frame: &mut Frame, app: &AppState, area: Rect) {
         .constraints([
             Constraint::Length(1), // padding
             Constraint::Length(3), // title
+            Constraint::Length(3), // notes
             Constraint::Length(3), // tags
             Constraint::Length(3), // priority
             Constraint::Length(3), // due_date
@@ -51,13 +52,21 @@ pub fn render_form(frame: &mut Frame, app: &AppState, area: Rect) {
         app.form.title_error.as_deref(),
         rows[1],
     );
-    render_tags_field(frame, app, rows[2]);
+    render_text_field(
+        frame,
+        "备注",
+        &app.form.notes,
+        app.form.focused_field == FormField::Notes,
+        None,
+        rows[2],
+    );
+    render_tags_field(frame, app, rows[3]);
     render_select_field(
         frame,
         "优先级",
         priority_label(&app.form.priority),
         app.form.focused_field == FormField::Priority,
-        rows[3],
+        rows[4],
     );
     render_text_field(
         frame,
@@ -65,10 +74,10 @@ pub fn render_form(frame: &mut Frame, app: &AppState, area: Rect) {
         &app.form.due_date,
         app.form.focused_field == FormField::DueDate,
         app.form.due_date_error.as_deref(),
-        rows[4],
+        rows[5],
     );
 
-    frame.render_widget(Paragraph::new(hint_line()), rows[6]);
+    frame.render_widget(Paragraph::new(hint_line()), rows[7]);
 }
 
 fn render_tags_field(frame: &mut Frame, app: &AppState, area: Rect) {

@@ -67,7 +67,7 @@ pub fn render(frame: &mut Frame, app: &AppState) -> (Rect, Rect) {
 
 fn render_title_bar(frame: &mut Frame, app: &AppState, area: Rect) {
     let total = app.filtered_todos().len();
-    let tag_label = app.selected_tag.as_deref().unwrap_or("全部");
+    let tag_label = app.selected_tag_label();
     let title = format!(" todo-tui  [{}]  {} 条", tag_label, total);
     let hints = " [?] 帮助  [q] 退出 ";
     let width = area.width as usize;
@@ -90,11 +90,18 @@ fn render_title_bar(frame: &mut Frame, app: &AppState, area: Rect) {
 
 fn render_status_bar(frame: &mut Frame, app: &AppState, area: Rect) {
     let search_hint;
+    let sort_hint;
     let hints = if app.focus_tag_panel {
-        " [→/Tab] 切回列表  [j/k] 移动  [Enter] 选择标签 "
+        " [→/Tab] 切回列表  [j/k] 移动  [Enter] 选择 "
     } else {
         match app.mode {
-            AppMode::Normal => " [←/Tab] 标签栏  [Enter] 详情  [a] 添加  [e] 编辑  [d] 删除  [Space] 完成  [x] 取消  [/] 搜索 ",
+            AppMode::Normal => {
+                sort_hint = format!(
+                    " [←/Tab] 过滤栏  [Enter] 详情  [a] 添加  [e] 编辑  [d] 删除  [Space] 完成  [x] 取消  [/] 搜索  [s] 排序:{}",
+                    app.sort_order.label()
+                );
+                &sort_hint
+            }
             AppMode::Search => {
                 search_hint = format!(" 搜索: {}█  [Esc] 退出", app.search_query);
                 &search_hint

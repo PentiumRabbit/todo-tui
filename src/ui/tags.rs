@@ -6,13 +6,13 @@ use ratatui::{
     Frame,
 };
 
-use crate::app::{tag_color, AppState};
+use crate::app::{tag_color, AppState, PanelItem};
 use crate::ui::theme;
 
 /// 渲染左侧标签侧边栏。
 pub fn render_tag_panel(frame: &mut Frame, app: &AppState, area: Rect) {
     let block = Block::default()
-        .title(" 标签 ")
+        .title(" 过滤 ")
         .borders(Borders::ALL)
         .border_type(BorderType::Rounded)
         .border_style(theme::border_for_focus(app.focus_tag_panel));
@@ -20,10 +20,7 @@ pub fn render_tag_panel(frame: &mut Frame, app: &AppState, area: Rect) {
     let items: Vec<ListItem> = app
         .tag_panel_items()
         .iter()
-        .map(|item| match item {
-            None => all_item(app),
-            Some(tag) => tag_item(tag, app),
-        })
+        .map(|item| build_item(item, app))
         .collect();
 
     let mut state = ListState::default();
@@ -41,24 +38,43 @@ pub fn render_tag_panel(frame: &mut Frame, app: &AppState, area: Rect) {
     frame.render_stateful_widget(list, area, &mut state);
 }
 
-fn all_item(app: &AppState) -> ListItem<'static> {
-    let is_selected = app.selected_tag.is_none();
+fn build_item(item: &PanelItem, app: &AppState) -> ListItem<'static> {
+    let is_selected = item.to_filter() == app.filter;
+
+    if item.is_builtin() {
+        builtin_item(item, is_selected)
+    } else {
+        tag_item(item, is_selected)
+    }
+}
+
+fn builtin_item(item: &PanelItem, is_selected: bool) -> ListItem<'static> {
+    let (icon, color) = match item {
+        PanelItem::All => ("◈", Color::White),
+        PanelItem::Status(crate::models::TodoStatus::Pending) => ("□", theme::STATUS_PENDING),
+        PanelItem::Status(crate::models::TodoStatus::Done) => ("✓", theme::STATUS_DONE),
+        PanelItem::Status(crate::models::TodoStatus::Cancelled) => ("✗", theme::STATUS_CANCELLED),
+        PanelItem::DueToday => ("⚑", theme::STATUS_DUE_TODAY),
+        PanelItem::Overdue => ("⚠", theme::STATUS_OVERDUE),
+        PanelItem::Tag(_) => unreachable!(),
+    };
+
+    let label = item.label().to_string();
     let style = if is_selected {
-        Style::default()
-            .fg(Color::White)
-            .add_modifier(Modifier::BOLD)
+        Style::default().fg(color).add_modifier(Modifier::BOLD)
     } else {
         Style::default().fg(theme::FG_TAG_INACTIVE)
     };
+
     ListItem::new(Line::from(vec![
         Span::raw(" "),
-        Span::styled("◈ 全部", style),
+        Span::styled(format!("{} {}", icon, label), style),
     ]))
 }
 
-fn tag_item(tag: &str, app: &AppState) -> ListItem<'static> {
+fn tag_item(item: &PanelItem, is_selected: bool) -> ListItem<'static> {
+    let tag = item.label();
     let (r, g, b) = tag_color(tag);
-    let is_selected = app.selected_tag.as_deref() == Some(tag);
     let tag_style = if is_selected {
         Style::default()
             .fg(Color::Rgb(r, g, b))

@@ -59,6 +59,10 @@ impl T {
         }
     }
 
+    pub fn due_today_label(&self) -> String {
+        if self.zh() { "⚠今天".to_string() } else { "⚠Today".to_string() }
+    }
+
     // --- terminal too small ---
     pub fn terminal_too_small(&self) -> &'static str {
         if self.zh() {

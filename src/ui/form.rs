@@ -62,10 +62,11 @@ pub fn render_form(frame: &mut Frame, app: &AppState, area: Rect) {
         rows[2],
     );
     render_tags_field(frame, app, &t, rows[3]);
-    render_select_field(
+    render_priority_field(
         frame,
         t.form_field_priority(),
         priority_label(&app.form.priority, &t),
+        &app.form.priority,
         app.form.focused_field == FormField::Priority,
         rows[4],
     );
@@ -147,7 +148,20 @@ fn render_text_field(
     frame.render_widget(Paragraph::new(display).block(block), area);
 }
 
-fn render_select_field(frame: &mut Frame, label: &str, value: &str, focused: bool, area: Rect) {
+fn render_priority_field(
+    frame: &mut Frame,
+    label: &str,
+    value: &str,
+    priority: &Priority,
+    focused: bool,
+    area: Rect,
+) {
+    use ratatui::style::Modifier;
+    let color = match priority {
+        Priority::High => theme::PRIORITY_HIGH,
+        Priority::Medium => theme::PRIORITY_MEDIUM,
+        Priority::Low => theme::PRIORITY_LOW,
+    };
     let display = if focused {
         format!("◀ {} ▶", value)
     } else {
@@ -158,7 +172,12 @@ fn render_select_field(frame: &mut Frame, label: &str, value: &str, focused: boo
         .borders(Borders::ALL)
         .border_type(BorderType::Rounded)
         .border_style(theme::border_for_focus(focused));
-    frame.render_widget(Paragraph::new(display).block(block), area);
+    let para = Paragraph::new(ratatui::text::Span::styled(
+        display,
+        Style::default().fg(color).add_modifier(Modifier::BOLD),
+    ))
+    .block(block);
+    frame.render_widget(para, area);
 }
 
 fn hint_line(t: &crate::i18n::T) -> Line<'static> {

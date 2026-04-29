@@ -34,9 +34,10 @@ pub fn render_list(frame: &mut Frame, app: &AppState, area: Rect) {
     // 内部可用宽度（减去左右 border 各1，再减去 highlight_symbol "▶ " 占2）
     let inner_width = area.width.saturating_sub(2 + 2) as usize;
 
+    let due_today_label = app.t().due_today_label();
     let items: Vec<ListItem> = filtered
         .iter()
-        .map(|todo| build_list_item(todo, inner_width))
+        .map(|todo| build_list_item(todo, inner_width, &due_today_label))
         .collect();
 
     let mut state = ListState::default();
@@ -52,11 +53,11 @@ pub fn render_list(frame: &mut Frame, app: &AppState, area: Rect) {
     frame.render_stateful_widget(list, area, &mut state);
 }
 
-fn build_list_item(todo: &Todo, inner_width: usize) -> ListItem<'static> {
+fn build_list_item(todo: &Todo, inner_width: usize, due_today_label: &str) -> ListItem<'static> {
     let (icon, icon_style) = status_icon(todo);
     let title_style = title_style(todo);
 
-    let (right_spans, right_width) = build_right_spans(todo);
+    let (right_spans, right_width) = build_right_spans(todo, due_today_label);
 
     let left_fixed = 3; // " □ "
     let title_chars = todo.title.as_str().width();
@@ -165,7 +166,7 @@ fn truncate_to_width(s: &str, max_width: usize) -> String {
     s[..end].to_string()
 }
 
-fn build_right_spans(todo: &Todo) -> (Vec<Span<'static>>, usize) {
+fn build_right_spans(todo: &Todo, due_today_label: &str) -> (Vec<Span<'static>>, usize) {
     let mut spans: Vec<Span<'static>> = Vec::new();
     let mut width: usize = 0;
 
@@ -185,7 +186,7 @@ fn build_right_spans(todo: &Todo) -> (Vec<Span<'static>>, usize) {
             (format!("⚠{}", short), theme::style_overdue_bold())
         } else if todo.is_due_today() {
             (
-                "⚠今天".to_string(),
+                due_today_label.to_string(),
                 Style::default().fg(theme::STATUS_DUE_TODAY),
             )
         } else {

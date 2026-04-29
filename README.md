@@ -2,7 +2,7 @@
 
 A keyboard-driven terminal todo manager built with Rust and [ratatui](https://github.com/ratatui-org/ratatui).
 
-[中文](README.zh.md)
+[中文](README_CN.md)
 
 ![Rust](https://img.shields.io/badge/rust-1.75%2B-orange)
 ![License](https://img.shields.io/badge/license-MIT-blue)

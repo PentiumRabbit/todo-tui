@@ -43,7 +43,7 @@ impl Default for FormState {
             notes: String::new(),
             tags: Vec::new(),
             tag_input: String::new(),
-            priority: Priority::Medium,
+            priority: Priority::Low,
             due_date: (chrono::Local::now() + chrono::Duration::days(1))
                 .format("%Y-%m-%d")
                 .to_string(),

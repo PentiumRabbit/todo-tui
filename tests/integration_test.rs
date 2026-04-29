@@ -89,7 +89,7 @@ mod storage_tests {
     #[test]
     fn test_priority_ordering() {
         // 验证优先级字符串排序逻辑
-        let priorities = vec!["High", "Medium", "Low"];
+        let priorities = ["High", "Medium", "Low"];
         assert_eq!(priorities[0], "High");
         assert_eq!(priorities[1], "Medium");
         assert_eq!(priorities[2], "Low");

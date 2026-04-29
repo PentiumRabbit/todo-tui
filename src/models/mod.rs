@@ -1,7 +1,5 @@
 pub mod todo;
 
-use chrono;
-
 pub use todo::{NewTodo, Priority, Todo, TodoStatus};
 
 #[derive(Debug, Clone, PartialEq)]
@@ -26,8 +24,8 @@ pub enum FormField {
 #[derive(Debug, Clone)]
 pub struct FormState {
     pub title: String,
-    pub tags: Vec<String>,       // 已选标签列表
-    pub tag_input: String,       // 当前正在输入的标签
+    pub tags: Vec<String>, // 已选标签列表
+    pub tag_input: String, // 当前正在输入的标签
     pub priority: Priority,
     pub due_date: String,
     pub focused_field: FormField,

@@ -5,33 +5,39 @@ mod list;
 mod tags;
 
 use ratatui::{
-    Frame,
     layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span},
-    widgets::{Block, Borders, BorderType, Clear, Paragraph},
+    widgets::{Block, BorderType, Borders, Clear, Paragraph},
+    Frame,
 };
 
 use crate::app::AppState;
 use crate::models::AppMode;
 
-// AppState 需要可变引用以写入布局区域
-#[allow(clippy::needless_pass_by_ref_mut)]
-
-pub fn render(frame: &mut Frame, app: &mut AppState) {
+/// 渲染整帧，返回 (tag_panel_area, list_area) 供调用方用于鼠标命中检测。
+pub fn render(frame: &mut Frame, app: &AppState) -> (Rect, Rect) {
     let size = frame.area();
 
     if size.width < 80 || size.height < 24 {
         let msg = Paragraph::new("终端太小，请调整至 80×24 以上")
             .style(Style::default().fg(Color::Red).add_modifier(Modifier::BOLD))
-            .block(Block::default().borders(Borders::ALL).border_type(BorderType::Rounded));
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .border_type(BorderType::Rounded),
+            );
         frame.render_widget(msg, size);
-        return;
+        return (Rect::default(), Rect::default());
     }
 
     let chunks = Layout::default()
         .direction(Direction::Vertical)
-        .constraints([Constraint::Length(1), Constraint::Min(0), Constraint::Length(1)])
+        .constraints([
+            Constraint::Length(1),
+            Constraint::Min(0),
+            Constraint::Length(1),
+        ])
         .split(size);
 
     render_title_bar(frame, app, chunks[0]);
@@ -42,8 +48,6 @@ pub fn render(frame: &mut Frame, app: &mut AppState) {
         .constraints([Constraint::Length(16), Constraint::Min(0)])
         .split(chunks[1]);
 
-    app.layout_tag_panel = body[0];
-    app.layout_list = body[1];
     tags::render_tag_panel(frame, app, body[0]);
     list::render_list(frame, app, body[1]);
 
@@ -56,6 +60,8 @@ pub fn render(frame: &mut Frame, app: &mut AppState) {
         AppMode::Help => help::render_help(frame, size),
         _ => {}
     }
+
+    (body[0], body[1])
 }
 
 fn render_title_bar(frame: &mut Frame, app: &AppState, area: Rect) {
@@ -66,11 +72,19 @@ fn render_title_bar(frame: &mut Frame, app: &AppState, area: Rect) {
     let width = area.width as usize;
     let pad = width.saturating_sub(title.len() + hints.len());
     let line = Line::from(vec![
-        Span::styled(title, Style::default().fg(Color::White).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            title,
+            Style::default()
+                .fg(Color::White)
+                .add_modifier(Modifier::BOLD),
+        ),
         Span::raw(" ".repeat(pad)),
         Span::styled(hints, Style::default().fg(Color::DarkGray)),
     ]);
-    frame.render_widget(Paragraph::new(line).style(Style::default().bg(Color::Rgb(30, 60, 100))), area);
+    frame.render_widget(
+        Paragraph::new(line).style(Style::default().bg(Color::Rgb(30, 60, 100))),
+        area,
+    );
 }
 
 fn render_status_bar(frame: &mut Frame, app: &AppState, area: Rect) {
@@ -88,7 +102,11 @@ fn render_status_bar(frame: &mut Frame, app: &AppState, area: Rect) {
         }
     };
     frame.render_widget(
-        Paragraph::new(hints).style(Style::default().bg(Color::Rgb(40, 40, 40)).fg(Color::Rgb(180, 180, 180))),
+        Paragraph::new(hints).style(
+            Style::default()
+                .bg(Color::Rgb(40, 40, 40))
+                .fg(Color::Rgb(180, 180, 180)),
+        ),
         area,
     );
 }
@@ -114,9 +132,17 @@ fn render_delete_confirm(frame: &mut Frame, app: &AppState, area: Rect) {
         Line::from(Span::styled(&msg, Style::default().fg(Color::White))),
         Line::from(""),
         Line::from(vec![
-            Span::styled("  [y/Enter] ", Style::default().fg(Color::Green).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "  [y/Enter] ",
+                Style::default()
+                    .fg(Color::Green)
+                    .add_modifier(Modifier::BOLD),
+            ),
             Span::raw("确认  "),
-            Span::styled("[n/Esc] ", Style::default().fg(Color::Red).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "[n/Esc] ",
+                Style::default().fg(Color::Red).add_modifier(Modifier::BOLD),
+            ),
             Span::raw("取消"),
         ]),
     ];

@@ -17,6 +17,7 @@ impl Priority {
         }
     }
 
+    #[allow(dead_code)]
     pub fn label(&self) -> &'static str {
         match self {
             Priority::High => "高",
@@ -86,10 +87,12 @@ pub struct Todo {
 }
 
 impl Todo {
+    #[allow(dead_code)]
     pub fn is_completed(&self) -> bool {
         self.status == TodoStatus::Done
     }
 
+    #[allow(dead_code)]
     pub fn is_cancelled(&self) -> bool {
         self.status == TodoStatus::Cancelled
     }
@@ -98,18 +101,20 @@ impl Todo {
         if self.status != TodoStatus::Pending {
             return false;
         }
-        self.due_date.as_deref().and_then(|d| d.parse::<NaiveDate>().ok()).map_or(false, |due| {
-            due < chrono::Local::now().date_naive()
-        })
+        self.due_date
+            .as_deref()
+            .and_then(|d| d.parse::<NaiveDate>().ok())
+            .is_some_and(|due| due < chrono::Local::now().date_naive())
     }
 
     pub fn is_due_today(&self) -> bool {
         if self.status != TodoStatus::Pending {
             return false;
         }
-        self.due_date.as_deref().and_then(|d| d.parse::<NaiveDate>().ok()).map_or(false, |due| {
-            due == chrono::Local::now().date_naive()
-        })
+        self.due_date
+            .as_deref()
+            .and_then(|d| d.parse::<NaiveDate>().ok())
+            .is_some_and(|due| due == chrono::Local::now().date_naive())
     }
 }
 

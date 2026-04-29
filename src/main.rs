@@ -5,11 +5,11 @@ mod ui;
 
 use anyhow::Result;
 use crossterm::{
-    event::{self, Event, EnableMouseCapture, DisableMouseCapture},
+    event::{self, DisableMouseCapture, EnableMouseCapture, Event},
     execute,
-    terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
+    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
-use ratatui::{Terminal, backend::CrosstermBackend};
+use ratatui::{backend::CrosstermBackend, Terminal};
 use std::io;
 use std::path::PathBuf;
 use std::time::Duration;
@@ -45,27 +45,39 @@ fn main() -> Result<()> {
     let result = run(&mut terminal, &mut app);
 
     disable_raw_mode()?;
-    execute!(terminal.backend_mut(), LeaveAlternateScreen, DisableMouseCapture)?;
+    execute!(
+        terminal.backend_mut(),
+        LeaveAlternateScreen,
+        DisableMouseCapture
+    )?;
     terminal.show_cursor()?;
 
     result
 }
 
 fn run(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>, app: &mut AppState) -> Result<()> {
-    loop {
-        terminal.draw(|f| ui::render(f, app))?;
+    use ratatui::layout::Rect;
+    use std::cell::Cell;
 
+    // 保存上一帧布局区域，供鼠标命中检测使用（初始为零区域，鼠标事件在首帧后才到来）
+    let last_tag_area = Cell::new(Rect::default());
+    let last_list_area = Cell::new(Rect::default());
+
+    loop {
+        terminal.draw(|f| {
+            let (tag_area, list_area) = ui::render(f, app);
+            last_tag_area.set(tag_area);
+            last_list_area.set(list_area);
+        })?;
 
         if event::poll(Duration::from_millis(16))? {
             match event::read()? {
-                Event::Key(key) => {
-                    match app.handle_event(key)? {
-                        models::AppAction::Quit => break,
-                        models::AppAction::Continue => {}
-                    }
-                }
+                Event::Key(key) => match app.handle_event(key)? {
+                    models::AppAction::Quit => break,
+                    models::AppAction::Continue => {}
+                },
                 Event::Mouse(mouse) => {
-                    app.handle_mouse(mouse)?;
+                    app.handle_mouse(mouse, last_tag_area.get(), last_list_area.get())?;
                 }
                 _ => {}
             }

@@ -21,7 +21,8 @@ mod storage_tests {
                 title TEXT NOT NULL,
                 completed INTEGER NOT NULL DEFAULT 0
             );",
-        ).unwrap();
+        )
+        .unwrap();
 
         assert!(db_path.exists());
     }
@@ -41,7 +42,8 @@ mod storage_tests {
                 due_date TEXT,
                 created_at TEXT NOT NULL
             );",
-        ).unwrap();
+        )
+        .unwrap();
 
         // 插入
         conn.execute(
@@ -51,28 +53,36 @@ mod storage_tests {
         let id = conn.last_insert_rowid();
 
         // 查询
-        let title: String = conn.query_row(
-            "SELECT title FROM todos WHERE id = ?1",
-            rusqlite::params![id],
-            |r| r.get(0),
-        ).unwrap();
+        let title: String = conn
+            .query_row(
+                "SELECT title FROM todos WHERE id = ?1",
+                rusqlite::params![id],
+                |r| r.get(0),
+            )
+            .unwrap();
         assert_eq!(title, "测试任务");
 
         // 更新
         conn.execute(
             "UPDATE todos SET completed = 1 WHERE id = ?1",
             rusqlite::params![id],
-        ).unwrap();
-        let completed: i64 = conn.query_row(
-            "SELECT completed FROM todos WHERE id = ?1",
-            rusqlite::params![id],
-            |r| r.get(0),
-        ).unwrap();
+        )
+        .unwrap();
+        let completed: i64 = conn
+            .query_row(
+                "SELECT completed FROM todos WHERE id = ?1",
+                rusqlite::params![id],
+                |r| r.get(0),
+            )
+            .unwrap();
         assert_eq!(completed, 1);
 
         // 删除
-        conn.execute("DELETE FROM todos WHERE id = ?1", rusqlite::params![id]).unwrap();
-        let count: i64 = conn.query_row("SELECT COUNT(*) FROM todos", [], |r| r.get(0)).unwrap();
+        conn.execute("DELETE FROM todos WHERE id = ?1", rusqlite::params![id])
+            .unwrap();
+        let count: i64 = conn
+            .query_row("SELECT COUNT(*) FROM todos", [], |r| r.get(0))
+            .unwrap();
         assert_eq!(count, 0);
     }
 

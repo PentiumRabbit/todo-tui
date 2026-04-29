@@ -1,5 +1,5 @@
 use anyhow::Result;
-use rusqlite::{Connection, params};
+use rusqlite::{params, Connection};
 use std::path::Path;
 use std::str::FromStr;
 
@@ -41,7 +41,11 @@ impl Storage {
 
         let version: i64 = self
             .conn
-            .query_row("SELECT COALESCE(MAX(version), 0) FROM schema_version", [], |r| r.get(0))
+            .query_row(
+                "SELECT COALESCE(MAX(version), 0) FROM schema_version",
+                [],
+                |r| r.get(0),
+            )
             .unwrap_or(0);
 
         if version < 1 {
@@ -90,7 +94,12 @@ impl Storage {
         self.conn.execute(
             "INSERT INTO todos (title, status, priority, due_date, created_at)
              VALUES (?1, 'Pending', ?2, ?3, ?4)",
-            params![new_todo.title, new_todo.priority.as_str(), new_todo.due_date, created_at],
+            params![
+                new_todo.title,
+                new_todo.priority.as_str(),
+                new_todo.due_date,
+                created_at
+            ],
         )?;
         let id = self.conn.last_insert_rowid();
         let tags = self.sync_tags(id, &new_todo.tags)?;
@@ -120,30 +129,52 @@ impl Storage {
         Ok(())
     }
 
-    // 同步标签：确保 tag 存在，清空旧关联，重新写入
+    /// 同步标签：在事务内清空旧关联并写入新标签，保证原子性。
     fn sync_tags(&self, todo_id: i64, tags: &[String]) -> Result<Vec<String>> {
-        self.conn.execute("DELETE FROM todo_tags WHERE todo_id = ?1", params![todo_id])?;
-        for name in tags {
-            let name = name.trim();
-            if name.is_empty() {
-                continue;
+        self.conn.execute_batch("BEGIN;")?;
+        let result = (|| -> Result<()> {
+            self.conn
+                .execute("DELETE FROM todo_tags WHERE todo_id = ?1", params![todo_id])?;
+            for name in tags {
+                let name = name.trim();
+                if name.is_empty() {
+                    continue;
+                }
+                self.conn.execute(
+                    "INSERT OR IGNORE INTO tags (name) VALUES (?1)",
+                    params![name],
+                )?;
+                let tag_id: i64 = self.conn.query_row(
+                    "SELECT id FROM tags WHERE name = ?1",
+                    params![name],
+                    |r| r.get(0),
+                )?;
+                self.conn.execute(
+                    "INSERT OR IGNORE INTO todo_tags (todo_id, tag_id) VALUES (?1, ?2)",
+                    params![todo_id, tag_id],
+                )?;
             }
-            self.conn.execute("INSERT OR IGNORE INTO tags (name) VALUES (?1)", params![name])?;
-            let tag_id: i64 = self.conn.query_row(
-                "SELECT id FROM tags WHERE name = ?1",
-                params![name],
-                |r| r.get(0),
-            )?;
-            self.conn.execute(
-                "INSERT OR IGNORE INTO todo_tags (todo_id, tag_id) VALUES (?1, ?2)",
-                params![todo_id, tag_id],
-            )?;
+            Ok(())
+        })();
+        match result {
+            Ok(()) => {
+                self.conn.execute_batch("COMMIT;")?;
+            }
+            Err(e) => {
+                let _ = self.conn.execute_batch("ROLLBACK;");
+                return Err(e);
+            }
         }
-        Ok(tags.iter().map(|s| s.trim().to_string()).filter(|s| !s.is_empty()).collect())
+        Ok(tags
+            .iter()
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty())
+            .collect())
     }
 
     pub fn delete_todo(&self, id: i64) -> Result<()> {
-        self.conn.execute("DELETE FROM todos WHERE id=?1", params![id])?;
+        self.conn
+            .execute("DELETE FROM todos WHERE id=?1", params![id])?;
         Ok(())
     }
 
@@ -159,11 +190,17 @@ impl Storage {
             .query_map([], |row| {
                 let status_str: String = row.get(2)?;
                 let priority_str: String = row.get(3)?;
+                let status = TodoStatus::from_str(&status_str).map_err(|_| {
+                    rusqlite::Error::InvalidColumnName(format!("unknown status: {status_str}"))
+                })?;
+                let priority = Priority::from_str(&priority_str).map_err(|_| {
+                    rusqlite::Error::InvalidColumnName(format!("unknown priority: {priority_str}"))
+                })?;
                 Ok(Todo {
                     id: row.get(0)?,
                     title: row.get(1)?,
-                    status: TodoStatus::from_str(&status_str).unwrap(),
-                    priority: Priority::from_str(&priority_str).unwrap(),
+                    status,
+                    priority,
                     tags: Vec::new(),
                     due_date: row.get(4)?,
                     created_at: row.get(5)?,
@@ -178,7 +215,9 @@ impl Storage {
              ORDER BY tt.todo_id, tg.name",
         )?;
         let pairs = tag_stmt
-            .query_map([], |row| Ok((row.get::<_, i64>(0)?, row.get::<_, String>(1)?)))?
+            .query_map([], |row| {
+                Ok((row.get::<_, i64>(0)?, row.get::<_, String>(1)?))
+            })?
             .collect::<rusqlite::Result<Vec<_>>>()?;
 
         for (todo_id, tag_name) in pairs {

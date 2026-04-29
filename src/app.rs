@@ -1,9 +1,11 @@
 use anyhow::Result;
 use chrono::NaiveDate;
-use crossterm::event::{KeyCode, KeyEvent, MouseEvent, MouseEventKind, MouseButton};
+use crossterm::event::{KeyCode, KeyEvent, MouseButton, MouseEvent, MouseEventKind};
 use ratatui::layout::Rect;
 
-use crate::models::{AppAction, AppMode, FormField, FormState, NewTodo, Priority, Todo, TodoStatus};
+use crate::models::{
+    AppAction, AppMode, FormField, FormState, NewTodo, Priority, Todo, TodoStatus,
+};
 use crate::storage::Storage;
 
 // 标签固定颜色池（循环分配）
@@ -13,7 +15,7 @@ pub const TAG_COLORS: &[(u8, u8, u8)] = &[
     (255, 190, 80),  // 黄
     (220, 120, 255), // 紫
     (255, 130, 100), // 橙红
-    (80,  210, 210), // 青
+    (80, 210, 210),  // 青
     (255, 160, 200), // 粉
     (160, 200, 100), // 黄绿
 ];
@@ -36,9 +38,6 @@ pub struct AppState {
     pub search_query: String,
     pub form: FormState,
     pub error_message: Option<String>,
-    // 上一帧各区域，用于鼠标命中检测（由 ui 层写入）
-    pub layout_tag_panel: Rect,
-    pub layout_list: Rect,
     storage: Storage,
 }
 
@@ -58,27 +57,32 @@ impl AppState {
             search_query: String::new(),
             form: FormState::default(),
             error_message: None,
-            layout_tag_panel: Rect::default(),
-            layout_list: Rect::default(),
             storage,
         })
     }
 
     pub fn filtered_todos(&self) -> Vec<&Todo> {
         let tag_filter = self.selected_tag.as_deref();
-        let search = if self.search_query.is_empty() { None } else { Some(self.search_query.to_lowercase()) };
+        let search = if self.search_query.is_empty() {
+            None
+        } else {
+            Some(self.search_query.to_lowercase())
+        };
 
-        self.todos.iter().filter(|t| {
-            let tag_ok = match tag_filter {
-                None => true,
-                Some(tag) => t.tags.iter().any(|tg| tg == tag),
-            };
-            let search_ok = match &search {
-                None => true,
-                Some(q) => t.title.to_lowercase().contains(q.as_str()),
-            };
-            tag_ok && search_ok
-        }).collect()
+        self.todos
+            .iter()
+            .filter(|t| {
+                let tag_ok = match tag_filter {
+                    None => true,
+                    Some(tag) => t.tags.iter().any(|tg| tg == tag),
+                };
+                let search_ok = match &search {
+                    None => true,
+                    Some(q) => t.title.to_lowercase().contains(q.as_str()),
+                };
+                tag_ok && search_ok
+            })
+            .collect()
     }
 
     pub fn selected_todo(&self) -> Option<&Todo> {
@@ -121,10 +125,8 @@ impl AppState {
                     self.mode = AppMode::Edit;
                 }
             }
-            KeyCode::Char('d') => {
-                if self.selected_todo().is_some() {
-                    self.mode = AppMode::DeleteConfirm;
-                }
+            KeyCode::Char('d') if self.selected_todo().is_some() => {
+                self.mode = AppMode::DeleteConfirm;
             }
             KeyCode::Char(' ') => self.toggle_status()?,
             KeyCode::Char('x') => self.cancel_todo()?,
@@ -133,16 +135,16 @@ impl AppState {
             KeyCode::Char('g') | KeyCode::Home => self.selected_index = 0,
             KeyCode::Char('G') | KeyCode::End => {
                 let len = self.filtered_todos().len();
-                if len > 0 { self.selected_index = len - 1; }
+                if len > 0 {
+                    self.selected_index = len - 1;
+                }
             }
             KeyCode::Char('/') => {
                 self.search_query.clear();
                 self.mode = AppMode::Search;
             }
-            KeyCode::Enter => {
-                if self.selected_todo().is_some() {
-                    self.mode = AppMode::Detail;
-                }
+            KeyCode::Enter if self.selected_todo().is_some() => {
+                self.mode = AppMode::Detail;
             }
             KeyCode::Tab => {
                 self.focus_tag_panel = true;
@@ -157,15 +159,11 @@ impl AppState {
         match event.code {
             KeyCode::Char('q') => return Ok(AppAction::Quit),
             KeyCode::Tab => self.focus_tag_panel = false,
-            KeyCode::Char('j') | KeyCode::Down => {
-                if self.tag_panel_index + 1 < items_len {
-                    self.tag_panel_index += 1;
-                }
+            KeyCode::Char('j') | KeyCode::Down if self.tag_panel_index + 1 < items_len => {
+                self.tag_panel_index += 1;
             }
-            KeyCode::Char('k') | KeyCode::Up => {
-                if self.tag_panel_index > 0 {
-                    self.tag_panel_index -= 1;
-                }
+            KeyCode::Char('k') | KeyCode::Up if self.tag_panel_index > 0 => {
+                self.tag_panel_index -= 1;
             }
             KeyCode::Enter | KeyCode::Char(' ') => {
                 let items = self.tag_panel_items();
@@ -187,10 +185,8 @@ impl AppState {
                     self.mode = AppMode::Edit;
                 }
             }
-            KeyCode::Char('d') => {
-                if self.selected_todo().is_some() {
-                    self.mode = AppMode::DeleteConfirm;
-                }
+            KeyCode::Char('d') if self.selected_todo().is_some() => {
+                self.mode = AppMode::DeleteConfirm;
             }
             KeyCode::Char(' ') => self.toggle_status()?,
             _ => {}
@@ -293,8 +289,12 @@ impl AppState {
             None => return Ok(()),
         };
         if let Some(todo) = self.todos.iter_mut().find(|t| t.id == id) {
+            let prev = todo.status.clone();
             todo.status = todo.status.next();
-            self.storage.update_todo(todo)?;
+            if let Err(e) = self.storage.update_todo(todo) {
+                todo.status = prev;
+                self.error_message = Some(e.to_string());
+            }
         }
         Ok(())
     }
@@ -305,8 +305,12 @@ impl AppState {
             None => return Ok(()),
         };
         if let Some(todo) = self.todos.iter_mut().find(|t| t.id == id) {
+            let prev = todo.status.clone();
             todo.status = TodoStatus::Cancelled;
-            self.storage.update_todo(todo)?;
+            if let Err(e) = self.storage.update_todo(todo) {
+                todo.status = prev;
+                self.error_message = Some(e.to_string());
+            }
         }
         Ok(())
     }
@@ -355,11 +359,22 @@ impl AppState {
 
         if let Some(edit_id) = self.form.editing_todo_id {
             if let Some(todo) = self.todos.iter_mut().find(|t| t.id == edit_id) {
+                let prev_title = todo.title.clone();
+                let prev_priority = todo.priority.clone();
+                let prev_tags = todo.tags.clone();
+                let prev_due_date = todo.due_date.clone();
                 todo.title = title;
                 todo.priority = self.form.priority.clone();
                 todo.tags = tags;
                 todo.due_date = due_date;
-                self.storage.update_todo(todo)?;
+                if let Err(e) = self.storage.update_todo(todo) {
+                    todo.title = prev_title;
+                    todo.priority = prev_priority;
+                    todo.tags = prev_tags;
+                    todo.due_date = prev_due_date;
+                    self.error_message = Some(e.to_string());
+                    return Ok(());
+                }
             }
         } else {
             let new_todo = NewTodo {
@@ -470,7 +485,13 @@ impl AppState {
         }
     }
 
-    pub fn handle_mouse(&mut self, event: MouseEvent) -> Result<()> {
+    /// 处理鼠标事件，需要传入上一帧渲染得到的布局区域用于命中检测。
+    pub fn handle_mouse(
+        &mut self,
+        event: MouseEvent,
+        layout_tag_panel: Rect,
+        layout_list: Rect,
+    ) -> Result<()> {
         // 弹窗模式下不处理鼠标（避免误操作）
         match self.mode {
             AppMode::Add | AppMode::Edit | AppMode::DeleteConfirm | AppMode::Help => return Ok(()),
@@ -482,23 +503,26 @@ impl AppState {
 
         match event.kind {
             MouseEventKind::Down(MouseButton::Left) => {
-                self.handle_mouse_click(col, row)?;
+                self.handle_mouse_click(col, row, layout_tag_panel, layout_list)?;
             }
             MouseEventKind::ScrollDown => {
-                self.handle_mouse_scroll(col, row, true);
+                self.handle_mouse_scroll(col, row, true, layout_tag_panel, layout_list);
             }
             MouseEventKind::ScrollUp => {
-                self.handle_mouse_scroll(col, row, false);
+                self.handle_mouse_scroll(col, row, false, layout_tag_panel, layout_list);
             }
             _ => {}
         }
         Ok(())
     }
 
-    fn handle_mouse_click(&mut self, col: u16, row: u16) -> Result<()> {
-        let tag_area = self.layout_tag_panel;
-        let list_area = self.layout_list;
-
+    fn handle_mouse_click(
+        &mut self,
+        col: u16,
+        row: u16,
+        tag_area: Rect,
+        list_area: Rect,
+    ) -> Result<()> {
         if in_rect(col, row, tag_area) {
             // 标签面板内点击：inner area 从 border+1 开始
             let inner_row = row.saturating_sub(tag_area.y + 1);
@@ -531,10 +555,14 @@ impl AppState {
         Ok(())
     }
 
-    fn handle_mouse_scroll(&mut self, col: u16, row: u16, down: bool) {
-        let tag_area = self.layout_tag_panel;
-        let list_area = self.layout_list;
-
+    fn handle_mouse_scroll(
+        &mut self,
+        col: u16,
+        row: u16,
+        down: bool,
+        tag_area: Rect,
+        list_area: Rect,
+    ) {
         if in_rect(col, row, tag_area) {
             let items_len = self.tag_panel_items().len();
             if down {
@@ -556,4 +584,141 @@ impl AppState {
 
 fn in_rect(col: u16, row: u16, r: Rect) -> bool {
     col >= r.x && col < r.x + r.width && row >= r.y && row < r.y + r.height
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::models::{Priority, Todo, TodoStatus};
+    use crate::storage::Storage;
+
+    fn make_todo(id: i64, title: &str, tags: Vec<String>) -> Todo {
+        Todo {
+            id,
+            title: title.to_string(),
+            status: TodoStatus::Pending,
+            priority: Priority::Medium,
+            tags,
+            due_date: None,
+            created_at: "2026-01-01T00:00:00".to_string(),
+        }
+    }
+
+    fn make_app(todos: Vec<Todo>) -> AppState {
+        let tmp = tempfile::NamedTempFile::new().unwrap();
+        let storage = Storage::new(tmp.path()).unwrap();
+        let all_tags: Vec<String> = {
+            let mut seen = std::collections::HashSet::new();
+            todos
+                .iter()
+                .flat_map(|t| t.tags.iter())
+                .filter(|tag| seen.insert(tag.as_str()))
+                .cloned()
+                .collect()
+        };
+        // Keep tempfile alive by leaking it; OK for short-lived test processes
+        std::mem::forget(tmp);
+        AppState {
+            mode: crate::models::AppMode::Normal,
+            todos,
+            all_tags,
+            selected_tag: None,
+            tag_panel_index: 0,
+            focus_tag_panel: false,
+            selected_index: 0,
+            list_offset: 0,
+            search_query: String::new(),
+            form: crate::models::FormState::default(),
+            error_message: None,
+            storage,
+        }
+    }
+
+    #[test]
+    fn test_filtered_todos_by_tag() {
+        let todos = vec![
+            make_todo(1, "工作任务", vec!["工作".to_string()]),
+            make_todo(2, "生活任务", vec!["生活".to_string()]),
+            make_todo(3, "多标签", vec!["工作".to_string(), "生活".to_string()]),
+        ];
+        let mut app = make_app(todos);
+
+        assert_eq!(app.filtered_todos().len(), 3);
+
+        app.selected_tag = Some("工作".to_string());
+        let work = app.filtered_todos();
+        assert_eq!(work.len(), 2);
+        assert!(work.iter().all(|t| t.tags.contains(&"工作".to_string())));
+
+        app.selected_tag = Some("生活".to_string());
+        assert_eq!(app.filtered_todos().len(), 2);
+    }
+
+    #[test]
+    fn test_filtered_todos_by_search() {
+        let todos = vec![
+            make_todo(1, "买菜", vec![]),
+            make_todo(2, "写代码", vec![]),
+            make_todo(3, "买书", vec![]),
+        ];
+        let mut app = make_app(todos);
+
+        app.search_query = "买".to_string();
+        assert_eq!(app.filtered_todos().len(), 2);
+
+        app.search_query = "代码".to_string();
+        assert_eq!(app.filtered_todos().len(), 1);
+
+        app.search_query = "不存在".to_string();
+        assert_eq!(app.filtered_todos().len(), 0);
+    }
+
+    #[test]
+    fn test_tag_panel_items() {
+        let todos = vec![
+            make_todo(1, "任务1", vec!["工作".to_string()]),
+            make_todo(2, "任务2", vec!["生活".to_string()]),
+        ];
+        let mut app = make_app(todos);
+        app.all_tags = vec!["工作".to_string(), "生活".to_string()];
+
+        let items = app.tag_panel_items();
+        assert!(items[0].is_none());
+        assert_eq!(items[1], Some("工作"));
+        assert_eq!(items[2], Some("生活"));
+        assert_eq!(items.len(), 3);
+    }
+
+    #[test]
+    fn test_delete_adjusts_selection() {
+        let todos = vec![
+            make_todo(1, "任务1", vec![]),
+            make_todo(2, "任务2", vec![]),
+            make_todo(3, "任务3", vec![]),
+        ];
+        let mut app = make_app(todos);
+        app.selected_index = 2;
+
+        app.todos.retain(|t| t.id != 3);
+        let len = app.filtered_todos().len();
+        if app.selected_index >= len && len > 0 {
+            app.selected_index = len - 1;
+        }
+
+        assert_eq!(app.selected_index, 1);
+    }
+
+    #[test]
+    fn test_selected_todo_respects_filter() {
+        let todos = vec![
+            make_todo(1, "工作任务", vec!["工作".to_string()]),
+            make_todo(2, "生活任务", vec!["生活".to_string()]),
+        ];
+        let mut app = make_app(todos);
+        app.selected_tag = Some("生活".to_string());
+        app.selected_index = 0;
+
+        let selected = app.selected_todo().unwrap();
+        assert_eq!(selected.title, "生活任务");
+    }
 }

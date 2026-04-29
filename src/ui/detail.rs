@@ -1,17 +1,19 @@
 use ratatui::{
-    Frame,
     layout::Rect,
     style::{Color, Modifier, Style},
     text::{Line, Span},
     widgets::{Block, BorderType, Borders, Clear, Paragraph, Wrap},
+    Frame,
 };
 
-use crate::app::{AppState, tag_color};
+use crate::app::{tag_color, AppState};
 use crate::models::{Priority, TodoStatus};
 use crate::ui::centered_rect;
 
 pub fn render_detail_popup(frame: &mut Frame, app: &AppState, area: Rect) {
-    let Some(todo) = app.selected_todo() else { return };
+    let Some(todo) = app.selected_todo() else {
+        return;
+    };
 
     let popup = centered_rect(70, 20, area);
     frame.render_widget(Clear, popup);
@@ -27,7 +29,9 @@ pub fn render_detail_popup(frame: &mut Frame, app: &AppState, area: Rect) {
 
     let label = Style::default().fg(Color::Rgb(120, 120, 120));
     let value = Style::default().fg(Color::Rgb(220, 220, 220));
-    let bold = Style::default().fg(Color::White).add_modifier(Modifier::BOLD);
+    let bold = Style::default()
+        .fg(Color::White)
+        .add_modifier(Modifier::BOLD);
 
     let (status_text, status_style) = match todo.status {
         TodoStatus::Pending if todo.is_overdue() => (
@@ -40,7 +44,12 @@ pub fn render_detail_popup(frame: &mut Frame, app: &AppState, area: Rect) {
     };
 
     let (priority_icon, priority_style) = match todo.priority {
-        Priority::High => ("▲ 高", Style::default().fg(Color::Rgb(240, 80, 80)).add_modifier(Modifier::BOLD)),
+        Priority::High => (
+            "▲ 高",
+            Style::default()
+                .fg(Color::Rgb(240, 80, 80))
+                .add_modifier(Modifier::BOLD),
+        ),
         Priority::Medium => ("● 中", Style::default().fg(Color::Rgb(220, 180, 60))),
         Priority::Low => ("▼ 低", Style::default().fg(Color::Rgb(80, 180, 80))),
     };
@@ -49,14 +58,27 @@ pub fn render_detail_popup(frame: &mut Frame, app: &AppState, area: Rect) {
         if todo.is_overdue() {
             Line::from(vec![
                 Span::styled("  截止日期:  ", label),
-                Span::styled(d.as_str(), Style::default().fg(Color::Rgb(220, 100, 40)).add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    d.as_str(),
+                    Style::default()
+                        .fg(Color::Rgb(220, 100, 40))
+                        .add_modifier(Modifier::BOLD),
+                ),
                 Span::styled("  ⚠ 已过期", Style::default().fg(Color::Rgb(220, 100, 40))),
             ])
         } else if todo.is_due_today() {
             Line::from(vec![
                 Span::styled("  截止日期:  ", label),
-                Span::styled(d.as_str(), Style::default().fg(Color::Rgb(220, 180, 60)).add_modifier(Modifier::BOLD)),
-                Span::styled("  ⚠ 今天到期", Style::default().fg(Color::Rgb(220, 180, 60))),
+                Span::styled(
+                    d.as_str(),
+                    Style::default()
+                        .fg(Color::Rgb(220, 180, 60))
+                        .add_modifier(Modifier::BOLD),
+                ),
+                Span::styled(
+                    "  ⚠ 今天到期",
+                    Style::default().fg(Color::Rgb(220, 180, 60)),
+                ),
             ])
         } else {
             Line::from(vec![
@@ -83,7 +105,9 @@ pub fn render_detail_popup(frame: &mut Frame, app: &AppState, area: Rect) {
             let (r, g, b) = tag_color(tag);
             spans.push(Span::styled(
                 format!("[{}] ", tag),
-                Style::default().fg(Color::Rgb(r, g, b)).add_modifier(Modifier::BOLD),
+                Style::default()
+                    .fg(Color::Rgb(r, g, b))
+                    .add_modifier(Modifier::BOLD),
             ));
         }
         Line::from(spans)
@@ -124,12 +148,10 @@ pub fn render_detail_popup(frame: &mut Frame, app: &AppState, area: Rect) {
             ),
         ]),
         Line::from(""),
-        Line::from(vec![
-            Span::styled(
-                "  [Esc] 关闭  [e] 编辑  [d] 删除  [Space] 切换完成",
-                Style::default().fg(Color::Rgb(100, 100, 100)),
-            ),
-        ]),
+        Line::from(vec![Span::styled(
+            "  [Esc] 关闭  [e] 编辑  [d] 删除  [Space] 切换完成",
+            Style::default().fg(Color::Rgb(100, 100, 100)),
+        )]),
     ];
 
     frame.render_widget(Paragraph::new(lines).wrap(Wrap { trim: false }), inner);

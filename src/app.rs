@@ -79,21 +79,6 @@ pub struct AppState {
     storage: Storage,
 }
 
-// Keep backward-compat accessor used in ui/mod.rs title bar
-impl AppState {
-    pub fn selected_tag_label(&self) -> &str {
-        match &self.filter {
-            FilterMode::All => "全部",
-            FilterMode::ByTag(t) => t.as_str(),
-            FilterMode::ByStatus(TodoStatus::Pending) => "未完成",
-            FilterMode::ByStatus(TodoStatus::Done) => "已完成",
-            FilterMode::ByStatus(TodoStatus::Cancelled) => "已取消",
-            FilterMode::DueToday => "今日到期",
-            FilterMode::Overdue => "已逾期",
-        }
-    }
-}
-
 impl AppState {
     /// 初始化状态，从 storage 加载全部 todo 和标签列表。
     pub fn new(storage: Storage) -> Result<Self> {

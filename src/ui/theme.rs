@@ -5,7 +5,6 @@ pub const BORDER_ACTIVE: Color = Color::Cyan;
 pub const BORDER_INACTIVE: Color = Color::Rgb(80, 80, 80);
 
 // ── 背景 ─────────────────────────────────────────
-pub const BG_TITLEBAR: Color = Color::Rgb(30, 60, 100);
 pub const BG_STATUSBAR: Color = Color::Rgb(40, 40, 40);
 pub const BG_TAG_HIGHLIGHT: Color = Color::Rgb(40, 60, 80);
 

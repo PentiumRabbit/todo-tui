@@ -34,25 +34,19 @@ pub fn render(frame: &mut Frame, app: &AppState) -> (Rect, Rect) {
 
     let chunks = Layout::default()
         .direction(Direction::Vertical)
-        .constraints([
-            Constraint::Length(1),
-            Constraint::Min(0),
-            Constraint::Length(1),
-        ])
+        .constraints([Constraint::Min(0), Constraint::Length(1)])
         .split(size);
-
-    render_title_bar(frame, app, chunks[0]);
 
     // 左侧标签栏 16 列，右侧列表占余下空间
     let body = Layout::default()
         .direction(Direction::Horizontal)
         .constraints([Constraint::Length(16), Constraint::Min(0)])
-        .split(chunks[1]);
+        .split(chunks[0]);
 
     tags::render_tag_panel(frame, app, body[0]);
     list::render_list(frame, app, body[1]);
 
-    render_status_bar(frame, app, chunks[2]);
+    render_status_bar(frame, app, chunks[1]);
 
     match app.mode {
         AppMode::Detail => detail::render_detail_popup(frame, app, size),
@@ -65,39 +59,16 @@ pub fn render(frame: &mut Frame, app: &AppState) -> (Rect, Rect) {
     (body[0], body[1])
 }
 
-fn render_title_bar(frame: &mut Frame, app: &AppState, area: Rect) {
-    let total = app.filtered_todos().len();
-    let tag_label = app.selected_tag_label();
-    let title = format!(" todo-tui  [{}]  {} 条", tag_label, total);
-    let hints = " [?] 帮助  [q] 退出 ";
-    let width = area.width as usize;
-    let pad = width.saturating_sub(title.len() + hints.len());
-    let line = Line::from(vec![
-        Span::styled(
-            title,
-            Style::default()
-                .fg(Color::White)
-                .add_modifier(Modifier::BOLD),
-        ),
-        Span::raw(" ".repeat(pad)),
-        Span::styled(hints, Style::default().fg(Color::DarkGray)),
-    ]);
-    frame.render_widget(
-        Paragraph::new(line).style(Style::default().bg(theme::BG_TITLEBAR)),
-        area,
-    );
-}
-
 fn render_status_bar(frame: &mut Frame, app: &AppState, area: Rect) {
     let search_hint;
     let sort_hint;
     let hints = if app.focus_tag_panel {
-        " [→/Tab] 切回列表  [j/k] 移动  [Enter] 选择 "
+        " [→/Tab] 列表  [j/k] 移动  [Enter] 选择  [q] 退出"
     } else {
         match app.mode {
             AppMode::Normal => {
                 sort_hint = format!(
-                    " [←/Tab] 过滤栏  [Enter] 详情  [a] 添加  [e] 编辑  [d] 删除  [Space] 完成  [x] 取消  [/] 搜索  [s] 排序:{}",
+                    " [←/Tab] 过滤栏  [a] 添加  [e] 编辑  [d] 删除  [Space] 完成  [x] 取消  [/] 搜索  [s] 排序:{}  [?] 帮助  [q] 退出",
                     app.sort_order.label()
                 );
                 &sort_hint

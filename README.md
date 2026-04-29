@@ -9,6 +9,14 @@ A keyboard-driven terminal todo manager built with Rust and [ratatui](https://gi
 
 ---
 
+> **Note / 说明**
+>
+> This project is entirely generated and maintained by AI. **Pull Requests are not accepted.** If you find a bug or have a suggestion, please [open an Issue](../../issues).
+>
+> 本项目由 AI 全程生成并维护。**不接受 Pull Request。** 如有问题或建议，请 [提交 Issue](../../issues)。
+
+---
+
 ## Features / 功能特性
 
 - **Tag filtering** — sidebar tag panel with instant filter / **标签过滤** — 侧边栏标签面板，实时过滤

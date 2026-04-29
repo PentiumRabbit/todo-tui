@@ -83,6 +83,7 @@ pub struct Todo {
     pub priority: Priority,
     pub tags: Vec<String>,
     pub due_date: Option<String>,
+    pub notes: Option<String>,
     pub created_at: String,
 }
 
@@ -123,4 +124,5 @@ pub struct NewTodo {
     pub priority: Priority,
     pub tags: Vec<String>,
     pub due_date: Option<String>,
+    pub notes: Option<String>,
 }

@@ -16,6 +16,7 @@ pub enum AppMode {
 #[derive(Debug, Clone, PartialEq)]
 pub enum FormField {
     Title,
+    Notes,
     Tags,
     Priority,
     DueDate,
@@ -24,6 +25,7 @@ pub enum FormField {
 #[derive(Debug, Clone)]
 pub struct FormState {
     pub title: String,
+    pub notes: String,
     pub tags: Vec<String>, // 已选标签列表
     pub tag_input: String, // 当前正在输入的标签
     pub priority: Priority,
@@ -38,6 +40,7 @@ impl Default for FormState {
     fn default() -> Self {
         Self {
             title: String::new(),
+            notes: String::new(),
             tags: Vec::new(),
             tag_input: String::new(),
             priority: Priority::Medium,
@@ -56,6 +59,7 @@ impl FormState {
     pub fn from_todo(todo: &Todo) -> Self {
         Self {
             title: todo.title.clone(),
+            notes: todo.notes.clone().unwrap_or_default(),
             tags: todo.tags.clone(),
             tag_input: String::new(),
             priority: todo.priority.clone(),

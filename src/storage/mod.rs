@@ -64,7 +64,6 @@ impl Storage {
             )?;
         }
 
-        // v3: 多标签支持，新增 tags 表和 todo_tags 关联表
         if version < 3 {
             self.conn.execute_batch(
                 "CREATE TABLE IF NOT EXISTS tags (
@@ -87,6 +86,13 @@ impl Storage {
             )?;
         }
 
+        if version < 4 {
+            self.conn.execute_batch(
+                "ALTER TABLE todos ADD COLUMN notes TEXT;
+                 INSERT OR REPLACE INTO schema_version (version) VALUES (4);",
+            )?;
+        }
+
         Ok(())
     }
 
@@ -94,12 +100,13 @@ impl Storage {
     pub fn insert_todo(&self, new_todo: &NewTodo) -> Result<Todo> {
         let created_at = chrono::Local::now().format("%Y-%m-%dT%H:%M:%S").to_string();
         self.conn.execute(
-            "INSERT INTO todos (title, status, priority, due_date, created_at)
-             VALUES (?1, 'Pending', ?2, ?3, ?4)",
+            "INSERT INTO todos (title, status, priority, due_date, notes, created_at)
+             VALUES (?1, 'Pending', ?2, ?3, ?4, ?5)",
             params![
                 new_todo.title,
                 new_todo.priority.as_str(),
                 new_todo.due_date,
+                new_todo.notes,
                 created_at
             ],
         )?;
@@ -112,6 +119,7 @@ impl Storage {
             priority: new_todo.priority.clone(),
             tags,
             due_date: new_todo.due_date.clone(),
+            notes: new_todo.notes.clone(),
             created_at,
         })
     }
@@ -119,12 +127,13 @@ impl Storage {
     /// 更新 todo 的全部字段并同步标签。
     pub fn update_todo(&self, todo: &Todo) -> Result<()> {
         self.conn.execute(
-            "UPDATE todos SET title=?1, status=?2, priority=?3, due_date=?4 WHERE id=?5",
+            "UPDATE todos SET title=?1, status=?2, priority=?3, due_date=?4, notes=?5 WHERE id=?6",
             params![
                 todo.title,
                 todo.status.as_str(),
                 todo.priority.as_str(),
                 todo.due_date,
+                todo.notes,
                 todo.id
             ],
         )?;
@@ -185,7 +194,7 @@ impl Storage {
     /// 返回全部 todo，按状态（Pending 优先）和优先级排序，同时填充标签。
     pub fn list_todos(&self) -> Result<Vec<Todo>> {
         let mut stmt = self.conn.prepare(
-            "SELECT id, title, status, priority, due_date, created_at
+            "SELECT id, title, status, priority, due_date, notes, created_at
              FROM todos ORDER BY
                  CASE status WHEN 'Pending' THEN 0 ELSE 1 END ASC,
                  CASE priority WHEN 'High' THEN 0 WHEN 'Medium' THEN 1 ELSE 2 END ASC,
@@ -208,7 +217,8 @@ impl Storage {
                     priority,
                     tags: Vec::new(),
                     due_date: row.get(4)?,
-                    created_at: row.get(5)?,
+                    notes: row.get(5)?,
+                    created_at: row.get(6)?,
                 })
             })?
             .collect::<rusqlite::Result<Vec<_>>>()?;

@@ -17,7 +17,7 @@ A keyboard-driven terminal todo manager built with Rust and [ratatui](https://gi
 
 ## Screenshot
 
-![todo-tui](https://github.com/user-attachments/assets/568ccc66-e6cd-402a-a32d-49f37abb404f)
+![todo-tui](https://github.com/user-attachments/assets/1de2eadd-0471-4571-a01c-8472cb6a28eb)
 
 ---
 

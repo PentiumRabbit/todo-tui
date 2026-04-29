@@ -652,7 +652,15 @@ impl AppState {
             let idx = inner_row as usize;
             let filtered_len = self.filtered_todos().len();
             if idx < filtered_len {
-                if self.selected_index == idx && self.mode == AppMode::Normal {
+                // 列 list_area.x+4 是状态图标（border+highlight_symbol+" "+icon）
+                let icon_col = list_area.x + 4;
+                if col == icon_col {
+                    let status = self.filtered_todos()[idx].status.clone();
+                    if status != crate::models::TodoStatus::Cancelled {
+                        self.selected_index = idx;
+                        self.toggle_status()?;
+                    }
+                } else if self.selected_index == idx && self.mode == AppMode::Normal {
                     self.mode = AppMode::Detail;
                 } else {
                     self.selected_index = idx;

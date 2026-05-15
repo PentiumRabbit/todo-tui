@@ -2,7 +2,7 @@ use ratatui::{
     layout::Rect,
     style::{Color, Modifier, Style},
     text::{Line, Span},
-    widgets::{Block, BorderType, Borders, Clear, Paragraph, Wrap},
+    widgets::{Block, Borders, Clear, Paragraph, Wrap},
     Frame,
 };
 
@@ -23,7 +23,7 @@ pub fn render_detail_popup(frame: &mut Frame, app: &AppState, area: Rect) {
     let block = Block::default()
         .title(t.detail_title())
         .borders(Borders::ALL)
-        .border_type(BorderType::Rounded)
+        .border_type(theme::BORDER_TYPE)
         .border_style(theme::border_active());
 
     let inner = block.inner(popup);
@@ -102,9 +102,15 @@ fn status_display<'a>(todo: &Todo, t: &'a crate::i18n::T) -> (&'a str, Style) {
             t.status_pending_overdue(),
             Style::default().fg(theme::STATUS_OVERDUE),
         ),
-        TodoStatus::Pending => (t.status_pending(), Style::default().fg(theme::STATUS_PENDING)),
+        TodoStatus::Pending => (
+            t.status_pending(),
+            Style::default().fg(theme::STATUS_PENDING),
+        ),
         TodoStatus::Done => (t.status_done(), Style::default().fg(theme::STATUS_DONE)),
-        TodoStatus::Cancelled => (t.status_cancelled(), Style::default().fg(theme::STATUS_CANCELLED)),
+        TodoStatus::Cancelled => (
+            t.status_cancelled(),
+            Style::default().fg(theme::STATUS_CANCELLED),
+        ),
     }
 }
 
@@ -116,7 +122,10 @@ fn priority_display<'a>(priority: &Priority, t: &'a crate::i18n::T) -> (&'a str,
                 .fg(theme::PRIORITY_HIGH)
                 .add_modifier(Modifier::BOLD),
         ),
-        Priority::Medium => (t.priority_medium(), Style::default().fg(theme::PRIORITY_MEDIUM)),
+        Priority::Medium => (
+            t.priority_medium(),
+            Style::default().fg(theme::PRIORITY_MEDIUM),
+        ),
         Priority::Low => (t.priority_low(), Style::default().fg(theme::PRIORITY_LOW)),
     }
 }
@@ -154,13 +163,19 @@ fn due_line(todo: &Todo, label: Style, value: Style, t: &crate::i18n::T) -> Line
         Line::from(vec![
             Span::styled(t.detail_label_due(), label),
             Span::styled(d, theme::style_overdue_bold()),
-            Span::styled(t.detail_overdue_suffix(), Style::default().fg(theme::STATUS_OVERDUE)),
+            Span::styled(
+                t.detail_overdue_suffix(),
+                Style::default().fg(theme::STATUS_OVERDUE),
+            ),
         ])
     } else if todo.is_due_today() {
         Line::from(vec![
             Span::styled(t.detail_label_due(), label),
             Span::styled(d, theme::style_due_today_bold()),
-            Span::styled(t.detail_due_today_suffix(), Style::default().fg(theme::STATUS_DUE_TODAY)),
+            Span::styled(
+                t.detail_due_today_suffix(),
+                Style::default().fg(theme::STATUS_DUE_TODAY),
+            ),
         ])
     } else {
         Line::from(vec![

@@ -15,25 +15,53 @@ impl T {
 
     // --- filter panel ---
     pub fn filter_all(&self) -> &'static str {
-        if self.zh() { "全部" } else { "All" }
+        if self.zh() {
+            "全部"
+        } else {
+            "All"
+        }
     }
     pub fn filter_pending(&self) -> &'static str {
-        if self.zh() { "未完成" } else { "Pending" }
+        if self.zh() {
+            "未完成"
+        } else {
+            "Pending"
+        }
     }
     pub fn filter_done(&self) -> &'static str {
-        if self.zh() { "已完成" } else { "Done" }
+        if self.zh() {
+            "已完成"
+        } else {
+            "Done"
+        }
     }
     pub fn filter_cancelled(&self) -> &'static str {
-        if self.zh() { "已取消" } else { "Cancelled" }
+        if self.zh() {
+            "已取消"
+        } else {
+            "Cancelled"
+        }
     }
     pub fn filter_due_today(&self) -> &'static str {
-        if self.zh() { "今日到期" } else { "Due Today" }
+        if self.zh() {
+            "今日到期"
+        } else {
+            "Due Today"
+        }
     }
     pub fn filter_overdue(&self) -> &'static str {
-        if self.zh() { "已逾期" } else { "Overdue" }
+        if self.zh() {
+            "已逾期"
+        } else {
+            "Overdue"
+        }
     }
     pub fn panel_title(&self) -> &'static str {
-        if self.zh() { " 过滤 " } else { " Filter " }
+        if self.zh() {
+            " 过滤 "
+        } else {
+            " Filter "
+        }
     }
 
     // --- status bar ---
@@ -60,7 +88,11 @@ impl T {
     }
 
     pub fn due_today_label(&self) -> String {
-        if self.zh() { "⚠今天".to_string() } else { "⚠Today".to_string() }
+        if self.zh() {
+            "⚠今天".to_string()
+        } else {
+            "⚠Today".to_string()
+        }
     }
 
     // --- terminal too small ---
@@ -74,7 +106,11 @@ impl T {
 
     // --- delete confirm ---
     pub fn delete_confirm_title(&self) -> &'static str {
-        if self.zh() { " 确认删除 " } else { " Confirm Delete " }
+        if self.zh() {
+            " 确认删除 "
+        } else {
+            " Confirm Delete "
+        }
     }
     pub fn delete_confirm_msg(&self, title: &str) -> String {
         if self.zh() {
@@ -93,16 +129,32 @@ impl T {
 
     // --- form ---
     pub fn form_add_title(&self) -> &'static str {
-        if self.zh() { " 添加 Todo " } else { " Add Todo " }
+        if self.zh() {
+            " 添加 Todo "
+        } else {
+            " Add Todo "
+        }
     }
     pub fn form_edit_title(&self) -> &'static str {
-        if self.zh() { " 编辑 Todo " } else { " Edit Todo " }
+        if self.zh() {
+            " 编辑 Todo "
+        } else {
+            " Edit Todo "
+        }
     }
     pub fn form_field_title(&self) -> &'static str {
-        if self.zh() { "标题" } else { "Title" }
+        if self.zh() {
+            "标题"
+        } else {
+            "Title"
+        }
     }
     pub fn form_field_notes(&self) -> &'static str {
-        if self.zh() { "备注" } else { "Notes" }
+        if self.zh() {
+            "备注"
+        } else {
+            "Notes"
+        }
     }
     pub fn form_field_tags(&self) -> &'static str {
         if self.zh() {
@@ -112,13 +164,25 @@ impl T {
         }
     }
     pub fn form_field_priority(&self) -> &'static str {
-        if self.zh() { "优先级" } else { "Priority" }
+        if self.zh() {
+            "优先级"
+        } else {
+            "Priority"
+        }
     }
     pub fn form_field_due_date(&self) -> &'static str {
-        if self.zh() { "截止日期" } else { "Due Date" }
+        if self.zh() {
+            "截止日期"
+        } else {
+            "Due Date"
+        }
     }
     pub fn form_no_tags(&self) -> &'static str {
-        if self.zh() { "无标签" } else { "no tags" }
+        if self.zh() {
+            "无标签"
+        } else {
+            "no tags"
+        }
     }
     pub fn form_hint(&self) -> Vec<(&'static str, &'static str)> {
         if self.zh() {
@@ -140,53 +204,106 @@ impl T {
         }
     }
     pub fn form_title_empty_error(&self) -> &'static str {
-        if self.zh() { "标题不能为空" } else { "Title is required" }
-    }
-    pub fn form_date_format_error(&self) -> &'static str {
-        if self.zh() { "格式应为 YYYY-MM-DD" } else { "Format: YYYY-MM-DD" }
+        if self.zh() {
+            "标题不能为空"
+        } else {
+            "Title is required"
+        }
     }
 
     // --- priority labels ---
     pub fn priority_high(&self) -> &'static str {
-        if self.zh() { "高" } else { "High" }
+        if self.zh() {
+            "高"
+        } else {
+            "High"
+        }
     }
     pub fn priority_medium(&self) -> &'static str {
-        if self.zh() { "中" } else { "Med" }
+        if self.zh() {
+            "中"
+        } else {
+            "Med"
+        }
     }
     pub fn priority_low(&self) -> &'static str {
-        if self.zh() { "低" } else { "Low" }
+        if self.zh() {
+            "低"
+        } else {
+            "Low"
+        }
     }
 
     // --- detail popup ---
     pub fn detail_title(&self) -> &'static str {
-        if self.zh() { " 详情 " } else { " Detail " }
+        if self.zh() {
+            " 详情 "
+        } else {
+            " Detail "
+        }
     }
     pub fn detail_label_title(&self) -> &'static str {
-        if self.zh() { "  标题:      " } else { "  Title:     " }
+        if self.zh() {
+            "  标题:      "
+        } else {
+            "  Title:     "
+        }
     }
     pub fn detail_label_status(&self) -> &'static str {
-        if self.zh() { "  状态:      " } else { "  Status:    " }
+        if self.zh() {
+            "  状态:      "
+        } else {
+            "  Status:    "
+        }
     }
     pub fn detail_label_priority(&self) -> &'static str {
-        if self.zh() { "  优先级:    " } else { "  Priority:  " }
+        if self.zh() {
+            "  优先级:    "
+        } else {
+            "  Priority:  "
+        }
     }
     pub fn detail_label_tags(&self) -> &'static str {
-        if self.zh() { "  标签:      " } else { "  Tags:      " }
+        if self.zh() {
+            "  标签:      "
+        } else {
+            "  Tags:      "
+        }
     }
     pub fn detail_label_due(&self) -> &'static str {
-        if self.zh() { "  截止日期:  " } else { "  Due Date:  " }
+        if self.zh() {
+            "  截止日期:  "
+        } else {
+            "  Due Date:  "
+        }
     }
     pub fn detail_label_notes(&self) -> &'static str {
-        if self.zh() { "  备注:      " } else { "  Notes:     " }
+        if self.zh() {
+            "  备注:      "
+        } else {
+            "  Notes:     "
+        }
     }
     pub fn detail_label_created(&self) -> &'static str {
-        if self.zh() { "  创建时间:  " } else { "  Created:   " }
+        if self.zh() {
+            "  创建时间:  "
+        } else {
+            "  Created:   "
+        }
     }
     pub fn detail_no_tags(&self) -> &'static str {
-        if self.zh() { "无" } else { "none" }
+        if self.zh() {
+            "无"
+        } else {
+            "none"
+        }
     }
     pub fn detail_no_due(&self) -> &'static str {
-        if self.zh() { "未设置" } else { "not set" }
+        if self.zh() {
+            "未设置"
+        } else {
+            "not set"
+        }
     }
     pub fn detail_hint(&self) -> &'static str {
         if self.zh() {
@@ -196,39 +313,83 @@ impl T {
         }
     }
     pub fn status_pending(&self) -> &'static str {
-        if self.zh() { "□ 未完成" } else { "□ Pending" }
+        if self.zh() {
+            "□ 未完成"
+        } else {
+            "□ Pending"
+        }
     }
     pub fn status_pending_overdue(&self) -> &'static str {
-        if self.zh() { "□ 未完成（已过期）" } else { "□ Pending (Overdue)" }
+        if self.zh() {
+            "□ 未完成（已过期）"
+        } else {
+            "□ Pending (Overdue)"
+        }
     }
     pub fn status_done(&self) -> &'static str {
-        if self.zh() { "✓ 已完成" } else { "✓ Done" }
+        if self.zh() {
+            "✓ 已完成"
+        } else {
+            "✓ Done"
+        }
     }
     pub fn status_cancelled(&self) -> &'static str {
-        if self.zh() { "✗ 已取消" } else { "✗ Cancelled" }
+        if self.zh() {
+            "✗ 已取消"
+        } else {
+            "✗ Cancelled"
+        }
     }
     pub fn detail_overdue_suffix(&self) -> &'static str {
-        if self.zh() { "  ⚠ 已过期" } else { "  ⚠ Overdue" }
+        if self.zh() {
+            "  ⚠ 已过期"
+        } else {
+            "  ⚠ Overdue"
+        }
     }
     pub fn detail_due_today_suffix(&self) -> &'static str {
-        if self.zh() { "  ⚠ 今天到期" } else { "  ⚠ Due today" }
+        if self.zh() {
+            "  ⚠ 今天到期"
+        } else {
+            "  ⚠ Due today"
+        }
     }
 
     // --- help ---
     pub fn help_title(&self) -> &'static str {
-        if self.zh() { " 快捷键帮助 " } else { " Keyboard Shortcuts " }
+        if self.zh() {
+            " 快捷键帮助 "
+        } else {
+            " Keyboard Shortcuts "
+        }
     }
     pub fn help_close_hint(&self) -> &'static str {
-        if self.zh() { "  [?/Esc] 关闭" } else { "  [?/Esc] Close" }
+        if self.zh() {
+            "  [?/Esc] 关闭"
+        } else {
+            "  [?/Esc] Close"
+        }
     }
     pub fn help_section_nav(&self) -> &'static str {
-        if self.zh() { "  导航" } else { "  Navigation" }
+        if self.zh() {
+            "  导航"
+        } else {
+            "  Navigation"
+        }
     }
     pub fn help_section_actions(&self) -> &'static str {
-        if self.zh() { "  操作" } else { "  Actions" }
+        if self.zh() {
+            "  操作"
+        } else {
+            "  Actions"
+        }
     }
     pub fn help_section_system(&self) -> &'static str {
-        if self.zh() { "  系统" } else { "  System" }
+        if self.zh() {
+            "  系统"
+        } else {
+            "  System"
+        }
     }
     pub fn help_entries(&self) -> Vec<(&'static str, &'static str)> {
         if self.zh() {

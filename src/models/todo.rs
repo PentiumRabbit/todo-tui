@@ -1,4 +1,4 @@
-use chrono::NaiveDate;
+use chrono::{NaiveDate, NaiveDateTime};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -98,24 +98,29 @@ impl Todo {
         self.status == TodoStatus::Cancelled
     }
 
+    fn parse_due(&self) -> Option<NaiveDateTime> {
+        let s = self.due_date.as_deref()?;
+        if let Ok(dt) = NaiveDateTime::parse_from_str(s, "%Y-%m-%d %H:%M") {
+            return Some(dt);
+        }
+        let d = NaiveDate::parse_from_str(s, "%Y-%m-%d").ok()?;
+        d.and_hms_opt(0, 0, 0)
+    }
+
     pub fn is_overdue(&self) -> bool {
         if self.status != TodoStatus::Pending {
             return false;
         }
-        self.due_date
-            .as_deref()
-            .and_then(|d| d.parse::<NaiveDate>().ok())
-            .is_some_and(|due| due < chrono::Local::now().date_naive())
+        self.parse_due()
+            .is_some_and(|due| due < chrono::Local::now().naive_local())
     }
 
     pub fn is_due_today(&self) -> bool {
         if self.status != TodoStatus::Pending {
             return false;
         }
-        self.due_date
-            .as_deref()
-            .and_then(|d| d.parse::<NaiveDate>().ok())
-            .is_some_and(|due| due == chrono::Local::now().date_naive())
+        self.parse_due()
+            .is_some_and(|due| due.date() == chrono::Local::now().date_naive())
     }
 }
 

@@ -23,7 +23,8 @@ use storage::Storage;
 fn db_path() -> PathBuf {
     dirs_next::home_dir()
         .unwrap_or_else(|| PathBuf::from("."))
-        .join(".todo-tui")
+        .join(".config")
+        .join("todo-tui")
         .join("todos.db")
 }
 
@@ -62,16 +63,19 @@ fn main() -> Result<()> {
 fn run(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>, app: &mut AppState) -> Result<()> {
     use ratatui::layout::Rect;
     use std::cell::Cell;
+    use ui::FormAreas;
 
     // 保存上一帧布局区域，供鼠标命中检测使用（初始为零区域，鼠标事件在首帧后才到来）
     let last_tag_area = Cell::new(Rect::default());
     let last_list_area = Cell::new(Rect::default());
+    let last_form_areas: Cell<FormAreas> = Cell::new(FormAreas::default());
 
     loop {
         terminal.draw(|f| {
-            let (tag_area, list_area) = ui::render(f, app);
+            let (tag_area, list_area, form_areas) = ui::render(f, app);
             last_tag_area.set(tag_area);
             last_list_area.set(list_area);
+            last_form_areas.set(form_areas);
         })?;
 
         if event::poll(Duration::from_millis(16))? {
@@ -81,7 +85,12 @@ fn run(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>, app: &mut AppState
                     models::AppAction::Continue => {}
                 },
                 Event::Mouse(mouse) => {
-                    app.handle_mouse(mouse, last_tag_area.get(), last_list_area.get())?;
+                    app.handle_mouse(
+                        mouse,
+                        last_tag_area.get(),
+                        last_list_area.get(),
+                        last_form_areas.get(),
+                    )?;
                 }
                 _ => {}
             }

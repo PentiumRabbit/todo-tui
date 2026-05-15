@@ -32,6 +32,14 @@ pub fn list_todos(&self) -> Result<Vec<Todo>>
 pub fn list_todos_by_category(&self, category_id: Option<i64>) -> Result<Vec<Todo>>
 ```
 
+### Tag 操作
+
+```rust
+pub fn list_all_tags(&self) -> Result<Vec<String>>
+pub fn delete_tag(&self, tag: &str) -> Result<()>
+// 从所有 todo 的 tags JSON 数组中移除指定 tag，批量更新
+```
+
 ### Category 操作
 
 ```rust

@@ -1,12 +1,11 @@
 use anyhow::Result;
-use chrono::NaiveDate;
 use crossterm::event::{KeyCode, KeyEvent, MouseButton, MouseEvent, MouseEventKind};
 use ratatui::layout::Rect;
 
 use crate::config::Config;
 use crate::i18n::T;
 use crate::models::{
-    AppAction, AppMode, FormField, FormState, NewTodo, Priority, Todo, TodoStatus,
+    AppAction, AppMode, DueDateSegment, FormField, FormState, NewTodo, Priority, Todo, TodoStatus,
 };
 use crate::storage::Storage;
 
@@ -53,7 +52,6 @@ impl SortOrder {
             SortOrder::ByCreatedAt => SortOrder::Default,
         }
     }
-
 }
 
 pub struct AppState {
@@ -148,7 +146,7 @@ impl AppState {
                 Priority::Low => 2,
             }),
             SortOrder::ByDueDate => result.sort_by(|a, b| {
-                let parse = |s: Option<&str>| s.and_then(|d| d.parse::<NaiveDate>().ok());
+                let parse = |s: Option<&str>| s.and_then(crate::models::FormState::parse_due_date);
                 match (parse(a.due_date.as_deref()), parse(b.due_date.as_deref())) {
                     (Some(da), Some(db)) => da.cmp(&db),
                     (Some(_), None) => std::cmp::Ordering::Less,
@@ -250,6 +248,9 @@ impl AppState {
             KeyCode::Char('L') => {
                 self.config.toggle_lang()?;
             }
+            KeyCode::Char('B') => {
+                self.config.toggle_statusbar()?;
+            }
             _ => {}
         }
         Ok(AppAction::Continue)
@@ -260,12 +261,12 @@ impl AppState {
         match event.code {
             KeyCode::Char('q') => return Ok(AppAction::Quit),
             KeyCode::Tab | KeyCode::Right | KeyCode::Char('l') => self.focus_tag_panel = false,
-            KeyCode::Char('j') | KeyCode::Down if self.tag_panel_index + 1 < items_len => {
-                self.tag_panel_index += 1;
+            KeyCode::Char('j') | KeyCode::Down if items_len > 0 => {
+                self.tag_panel_index = (self.tag_panel_index + 1) % items_len;
                 self.sync_filter();
             }
-            KeyCode::Char('k') | KeyCode::Up if self.tag_panel_index > 0 => {
-                self.tag_panel_index -= 1;
+            KeyCode::Char('k') | KeyCode::Up if items_len > 0 => {
+                self.tag_panel_index = self.tag_panel_index.checked_sub(1).unwrap_or(items_len - 1);
                 self.sync_filter();
             }
             KeyCode::Enter => {
@@ -274,6 +275,26 @@ impl AppState {
             KeyCode::Char('g') | KeyCode::Home => self.tag_panel_index = 0,
             KeyCode::Char('G') | KeyCode::End => {
                 self.tag_panel_index = self.tag_panel_items().len().saturating_sub(1);
+            }
+            KeyCode::Char('D') => {
+                if let PanelItem::Tag(tag) = self.tag_panel_items()[self.tag_panel_index].clone() {
+                    if let Err(e) = self.storage.delete_tag(&tag) {
+                        self.error_message = Some(e.to_string());
+                    } else {
+                        // 从内存中的 todos 里同步移除该 tag
+                        for todo in &mut self.todos {
+                            todo.tags.retain(|t| t != &tag);
+                        }
+                        self.all_tags.retain(|t| t != &tag);
+                        self.filter = FilterMode::All;
+                        self.selected_index = 0;
+                        // 保持光标位置，越界时退一格
+                        let new_len = self.tag_panel_items().len();
+                        if self.tag_panel_index >= new_len {
+                            self.tag_panel_index = new_len.saturating_sub(1);
+                        }
+                    }
+                }
             }
             _ => {}
         }
@@ -318,6 +339,27 @@ impl AppState {
                 }
             }
             KeyCode::Backspace => self.form_backspace(),
+            KeyCode::Left if self.form.focused_field == FormField::Tags => {
+                self.form_tag_cursor_left();
+            }
+            KeyCode::Right if self.form.focused_field == FormField::Tags => {
+                self.form_tag_cursor_right();
+            }
+            KeyCode::Left if self.form.focused_field == FormField::DueDate => {
+                self.form.due_segment = self.form.due_segment.prev();
+            }
+            KeyCode::Right if self.form.focused_field == FormField::DueDate => {
+                self.form.due_segment = self.form.due_segment.next();
+            }
+            KeyCode::Up | KeyCode::Char('+') if self.form.focused_field == FormField::DueDate => {
+                self.due_segment_inc(1);
+            }
+            KeyCode::Down | KeyCode::Char('-') if self.form.focused_field == FormField::DueDate => {
+                self.due_segment_inc(-1);
+            }
+            KeyCode::Char('c') if self.form.focused_field == FormField::DueDate => {
+                self.form.due_enabled = !self.form.due_enabled;
+            }
             KeyCode::Up => self.form_cycle_up(),
             KeyCode::Down => self.form_cycle_down(),
             KeyCode::Char('k') if self.form.focused_field == FormField::Priority => {
@@ -343,7 +385,12 @@ impl AppState {
 
     fn handle_search(&mut self, event: KeyEvent) -> Result<AppAction> {
         match event.code {
-            KeyCode::Esc | KeyCode::Enter => {
+            KeyCode::Esc => {
+                self.search_query.clear();
+                self.mode = AppMode::Normal;
+                self.selected_index = 0;
+            }
+            KeyCode::Enter => {
                 self.mode = AppMode::Normal;
                 self.selected_index = 0;
             }
@@ -378,14 +425,15 @@ impl AppState {
 
     fn move_down(&mut self) {
         let len = self.filtered_todos().len();
-        if len > 0 && self.selected_index < len - 1 {
-            self.selected_index += 1;
+        if len > 0 {
+            self.selected_index = (self.selected_index + 1) % len;
         }
     }
 
     fn move_up(&mut self) {
-        if self.selected_index > 0 {
-            self.selected_index -= 1;
+        let len = self.filtered_todos().len();
+        if len > 0 {
+            self.selected_index = self.selected_index.checked_sub(1).unwrap_or(len - 1);
         }
     }
 
@@ -443,18 +491,10 @@ impl AppState {
             return Ok(());
         }
 
-        let due_date = if self.form.due_date.is_empty() {
-            None
+        let due_date = if self.form.due_enabled {
+            Some(self.form.due_to_string())
         } else {
-            match self.form.due_date.parse::<NaiveDate>() {
-                Ok(_) => Some(self.form.due_date.clone()),
-                Err(_) => {
-                    self.form.due_date_error =
-                        Some(self.t().form_date_format_error().to_string());
-                    self.form.focused_field = FormField::DueDate;
-                    return Ok(());
-                }
-            }
+            None
         };
 
         let notes = if self.form.notes.trim().is_empty() {
@@ -512,6 +552,7 @@ impl AppState {
     }
 
     fn form_next_field(&mut self) {
+        self.form.tag_cursor = None;
         self.form.focused_field = match self.form.focused_field {
             FormField::Title => FormField::Notes,
             FormField::Notes => FormField::Tags,
@@ -522,6 +563,7 @@ impl AppState {
     }
 
     fn form_prev_field(&mut self) {
+        self.form.tag_cursor = None;
         self.form.focused_field = match self.form.focused_field {
             FormField::Title => FormField::DueDate,
             FormField::Notes => FormField::Title,
@@ -543,15 +585,83 @@ impl AppState {
             FormField::Tags => {
                 if !self.form.tag_input.is_empty() {
                     self.form.tag_input.pop();
-                } else {
-                    self.form.tags.pop();
+                } else if let Some(idx) = self.form.tag_cursor {
+                    self.form.tags.remove(idx);
+                    self.form.tag_cursor = if self.form.tags.is_empty() {
+                        None
+                    } else {
+                        Some(idx.saturating_sub(1).min(self.form.tags.len() - 1))
+                    };
+                } else if !self.form.tags.is_empty() {
+                    // 光标在输入态，退格进入最后一个 tag 的选中态
+                    self.form.tag_cursor = Some(self.form.tags.len() - 1);
                 }
             }
             FormField::DueDate => {
-                self.form.due_date.pop();
-                self.form.due_date_error = None;
+                // 分段选择器模式，退格切换到前一段
+                self.form.due_segment = self.form.due_segment.prev();
             }
             _ => {}
+        }
+    }
+
+    fn due_segment_inc(&mut self, delta: i32) {
+        use chrono::NaiveDate;
+        let f = &mut self.form;
+        match f.due_segment {
+            DueDateSegment::Year => {
+                f.due_year = (f.due_year + delta).clamp(2000, 2099);
+                // 修正月日合法性
+                let max_day = days_in_month(f.due_year, f.due_month);
+                if f.due_day > max_day {
+                    f.due_day = max_day;
+                }
+            }
+            DueDateSegment::Month => {
+                let m = ((f.due_month as i32 - 1 + delta).rem_euclid(12)) as u32 + 1;
+                f.due_month = m;
+                let max_day = days_in_month(f.due_year, f.due_month);
+                if f.due_day > max_day {
+                    f.due_day = max_day;
+                }
+            }
+            DueDateSegment::Day => {
+                let max_day = days_in_month(f.due_year, f.due_month);
+                f.due_day = ((f.due_day as i32 - 1 + delta).rem_euclid(max_day as i32)) as u32 + 1;
+            }
+            DueDateSegment::Hour => {
+                f.due_hour = ((f.due_hour as i32 + delta).rem_euclid(24)) as u32;
+            }
+            DueDateSegment::Minute => {
+                f.due_minute = ((f.due_minute as i32 + delta).rem_euclid(60)) as u32;
+            }
+        }
+        // 验证日期合法（防止 2 月 30 日等）
+        if NaiveDate::from_ymd_opt(f.due_year, f.due_month, f.due_day).is_none() {
+            f.due_day = days_in_month(f.due_year, f.due_month);
+        }
+    }
+
+    fn form_tag_cursor_left(&mut self) {
+        if self.form.tags.is_empty() {
+            return;
+        }
+        self.form.tag_cursor = Some(match self.form.tag_cursor {
+            None => self.form.tags.len() - 1,
+            Some(0) => 0,
+            Some(i) => i - 1,
+        });
+    }
+
+    fn form_tag_cursor_right(&mut self) {
+        match self.form.tag_cursor {
+            None => {}
+            Some(i) if i + 1 >= self.form.tags.len() => {
+                self.form.tag_cursor = None; // 回到输入态
+            }
+            Some(i) => {
+                self.form.tag_cursor = Some(i + 1);
+            }
         }
     }
 
@@ -572,8 +682,7 @@ impl AppState {
                 }
             }
             FormField::DueDate => {
-                self.form.due_date.push(c);
-                self.form.due_date_error = None;
+                // 分段选择器模式，字符输入无效（用方向键/滚轮调整）
             }
             _ => {}
         }
@@ -605,14 +714,41 @@ impl AppState {
         event: MouseEvent,
         layout_tag_panel: Rect,
         layout_list: Rect,
+        form_areas: crate::ui::FormAreas,
     ) -> Result<()> {
-        match self.mode {
-            AppMode::Add | AppMode::Edit | AppMode::DeleteConfirm | AppMode::Help => return Ok(()),
-            _ => {}
-        }
-
         let col = event.column;
         let row = event.row;
+
+        if matches!(self.mode, AppMode::Add | AppMode::Edit) {
+            match event.kind {
+                MouseEventKind::Down(MouseButton::Left) => {
+                    self.handle_mouse_click_form(col, row, form_areas);
+                }
+                MouseEventKind::ScrollDown if in_rect(col, row, form_areas.priority) => {
+                    self.form.focused_field = FormField::Priority;
+                    self.form_cycle_down();
+                }
+                MouseEventKind::ScrollUp if in_rect(col, row, form_areas.priority) => {
+                    self.form.focused_field = FormField::Priority;
+                    self.form_cycle_up();
+                }
+                MouseEventKind::ScrollDown if in_rect(col, row, form_areas.due_date) => {
+                    self.form.focused_field = FormField::DueDate;
+                    self.due_segment_inc(-1);
+                }
+                MouseEventKind::ScrollUp if in_rect(col, row, form_areas.due_date) => {
+                    self.form.focused_field = FormField::DueDate;
+                    self.due_segment_inc(1);
+                }
+                _ => {}
+            }
+            return Ok(());
+        }
+
+        match self.mode {
+            AppMode::DeleteConfirm | AppMode::Help => return Ok(()),
+            _ => {}
+        }
 
         match event.kind {
             MouseEventKind::Down(MouseButton::Left) => {
@@ -627,6 +763,25 @@ impl AppState {
             _ => {}
         }
         Ok(())
+    }
+
+    fn handle_mouse_click_form(&mut self, col: u16, row: u16, areas: crate::ui::FormAreas) {
+        if in_rect(col, row, areas.title) {
+            self.form.focused_field = FormField::Title;
+            self.form.tag_cursor = None;
+        } else if in_rect(col, row, areas.notes) {
+            self.form.focused_field = FormField::Notes;
+            self.form.tag_cursor = None;
+        } else if in_rect(col, row, areas.tags) {
+            self.form.focused_field = FormField::Tags;
+            self.form.tag_cursor = None;
+        } else if in_rect(col, row, areas.priority) {
+            self.form.focused_field = FormField::Priority;
+            self.form.tag_cursor = None;
+        } else if in_rect(col, row, areas.due_date) {
+            self.form.focused_field = FormField::DueDate;
+            self.form.tag_cursor = None;
+        }
     }
 
     fn handle_mouse_click(
@@ -697,6 +852,18 @@ impl AppState {
 
 fn in_rect(col: u16, row: u16, r: Rect) -> bool {
     col >= r.x && col < r.x + r.width && row >= r.y && row < r.y + r.height
+}
+
+fn days_in_month(year: i32, month: u32) -> u32 {
+    use chrono::{Datelike, NaiveDate};
+    let next = if month == 12 {
+        NaiveDate::from_ymd_opt(year + 1, 1, 1)
+    } else {
+        NaiveDate::from_ymd_opt(year, month + 1, 1)
+    };
+    next.and_then(|d| d.pred_opt())
+        .map(|d| d.day())
+        .unwrap_or(28)
 }
 
 /// 标签面板条目类型，区分内置虚拟条目和真实标签。
@@ -785,6 +952,7 @@ mod tests {
             error_message: None,
             config: crate::config::Config::load().unwrap_or_else(|_| crate::config::Config {
                 lang: crate::config::Lang::En,
+                show_statusbar: true,
                 path: std::path::PathBuf::from("/tmp/test-config.toml"),
             }),
             storage,

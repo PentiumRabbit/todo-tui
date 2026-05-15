@@ -9,7 +9,21 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
+  check-readme:
+    name: Check README version
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4.2.2
+      - name: Verify README mentions current tag version
+        run: |
+          VERSION=${GITHUB_REF_NAME#v}
+          if ! grep -q "$VERSION" README.md; then
+            echo "::error::README.md does not mention version $VERSION. Please update README before tagging."
+            exit 1
+          fi
+
   build:
+    needs: check-readme
     name: Build ${{ matrix.target }}
     runs-on: ${{ matrix.os }}
     strategy:
@@ -57,6 +71,7 @@ jobs:
 
   deb:
     name: Build .deb (Ubuntu x86_64)
+    needs: check-readme
     runs-on: ubuntu-latest
 
     steps:

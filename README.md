@@ -9,12 +9,6 @@ A keyboard-driven terminal todo manager built with Rust and [ratatui](https://gi
 
 ---
 
-> **Note**
->
-> This project is entirely generated and maintained by AI. **Pull Requests are not accepted.** If you find a bug or have a suggestion, please [open an Issue](../../issues).
-
----
-
 ## Screenshot
 
 ![todo-tui](https://github.com/user-attachments/assets/4ecb1596-0387-4098-9d87-9d06da2338e5)
@@ -25,11 +19,11 @@ A keyboard-driven terminal todo manager built with Rust and [ratatui](https://gi
 
 - **Filter panel** — filter by tag, status (Pending/Done/Cancelled), due today, or overdue
 - **Priority levels** — High / Medium / Low with color indicators
-- **Due dates** — overdue and today's tasks highlighted
-- **Notes** — optional notes field displayed inline in the list
+- **Due dates** — precise to the minute, overdue and today's tasks highlighted
+- **Notes** — optional multi-line notes field displayed inline in the list
 - **Sort control** — cycle sort by priority / due date / created time
 - **Full CRUD** — add, edit, delete, complete, cancel
-- **Persistent storage** — SQLite at `~/.todo-tui/todos.db`
+- **Persistent storage** — SQLite at `~/.config/todo-tui/todos.db`
 - **Search** — matches title, tags, and notes in real time
 - **Mouse support** — click and scroll in addition to keyboard
 - **Language toggle** — switch between English and Chinese with `L`
@@ -46,6 +40,12 @@ brew install todo-tui
 ```
 
 ### cargo install
+
+```bash
+cargo install todo-tui
+```
+
+Or install directly from source:
 
 ```bash
 cargo install --git https://github.com/PentiumRabbit/todo-tui.git
@@ -70,7 +70,7 @@ sudo mv todo-tui /usr/local/bin/
 **Ubuntu / Linux (x86_64) — `.deb` package**
 ```bash
 curl -LO https://github.com/PentiumRabbit/todo-tui/releases/latest/download/todo-tui_0.3.0-1_amd64.deb
-sudo dpkg -i todo-tui_0.2.0-1_amd64.deb
+sudo dpkg -i todo-tui_0.3.0-1_amd64.deb
 ```
 
 **Ubuntu / Linux (x86_64) — binary**
@@ -102,7 +102,7 @@ cargo build --release
 todo-tui
 ```
 
-The data file is created automatically at `~/.todo-tui/todos.db` on first launch.
+Data and config are created automatically on first launch at `~/.config/todo-tui/`.
 
 ---
 
@@ -112,8 +112,8 @@ The data file is created automatically at `~/.todo-tui/todos.db` on first launch
 
 | Key | Action |
 |-----|--------|
-| `j` / `↓` | Move down |
-| `k` / `↑` | Move up |
+| `j` / `↓` | Move down (wraps to top) |
+| `k` / `↑` | Move up (wraps to bottom) |
 | `g` / `Home` | Jump to top |
 | `G` / `End` | Jump to bottom |
 | `h` / `←` / `Tab` | Focus filter panel |
@@ -125,6 +125,8 @@ The data file is created automatically at `~/.todo-tui/todos.db` on first launch
 | `x` | Cancel todo |
 | `s` | Cycle sort order |
 | `/` | Search |
+| `H` | Toggle filter panel |
+| `B` | Toggle status bar |
 | `L` | Toggle language (En/Zh) |
 | `?` | Help |
 | `q` | Quit |
@@ -133,12 +135,13 @@ The data file is created automatically at `~/.todo-tui/todos.db` on first launch
 
 | Key | Action |
 |-----|--------|
-| `j` / `↓` | Move down |
-| `k` / `↑` | Move up |
+| `j` / `↓` | Move down (wraps) |
+| `k` / `↑` | Move up (wraps) |
 | `g` / `Home` | Jump to top |
 | `G` / `End` | Jump to bottom |
 | `l` / `→` / `Tab` | Focus todo list |
 | `Enter` | Select filter |
+| `D` | Delete selected tag |
 
 ### Add / Edit Form
 
@@ -146,9 +149,23 @@ The data file is created automatically at `~/.todo-tui/todos.db` on first launch
 |-----|--------|
 | `Tab` | Next field |
 | `Shift+Tab` | Prev field |
-| `↑` / `↓` | Cycle priority |
+| `↑` / `↓` | Cycle priority (on Priority field) |
+| `←` / `→` | Move tag cursor (on Tags field) |
+| `Backspace` | Delete char / select & delete tag |
+| `←` / `→` | Switch date segment (on Due Date field) |
+| `↑` / `↓` / scroll | Adjust date segment value |
+| `c` | Clear due date (on Due Date field) |
 | `Enter` | Submit |
 | `Esc` | Cancel |
+
+---
+
+## Data & Config
+
+| Path | Description |
+|------|-------------|
+| `~/.config/todo-tui/todos.db` | SQLite database |
+| `~/.config/todo-tui/config.toml` | Language and UI preferences |
 
 ---
 
@@ -158,7 +175,7 @@ The data file is created automatically at `~/.todo-tui/todos.db` on first launch
 src/
 ├── main.rs          # Entry point
 ├── app.rs           # State & event handling
-├── config.rs        # Config persistence (~/.config/todo-tui/config.toml)
+├── config.rs        # Config persistence
 ├── i18n.rs          # UI strings (En/Zh)
 ├── models/          # Data models
 ├── storage/         # SQLite persistence

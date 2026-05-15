@@ -6,6 +6,9 @@ description = "A keyboard-driven terminal todo manager"
 license = "MIT"
 homepage = "https://github.com/PentiumRabbit/todo-tui"
 repository = "https://github.com/PentiumRabbit/todo-tui"
+readme = "README.md"
+keywords = ["todo", "tui", "terminal", "productivity", "ratatui"]
+categories = ["command-line-utilities"]
 
 [package.metadata.deb]
 maintainer = "PentiumRabbit"

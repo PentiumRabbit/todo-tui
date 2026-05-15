@@ -45,6 +45,12 @@ brew tap PentiumRabbit/tap
 brew install todo-tui
 ```
 
+### cargo install
+
+```bash
+cargo install --git https://github.com/PentiumRabbit/todo-tui.git
+```
+
 ### Download from Release
 
 Go to the [Releases](../../releases) page and download the binary for your platform.
@@ -63,7 +69,7 @@ sudo mv todo-tui /usr/local/bin/
 
 **Ubuntu / Linux (x86_64) — `.deb` package**
 ```bash
-curl -LO https://github.com/PentiumRabbit/todo-tui/releases/latest/download/todo-tui_0.2.0-1_amd64.deb
+curl -LO https://github.com/PentiumRabbit/todo-tui/releases/latest/download/todo-tui_0.3.0-1_amd64.deb
 sudo dpkg -i todo-tui_0.2.0-1_amd64.deb
 ```
 

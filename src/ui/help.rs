@@ -2,12 +2,12 @@ use ratatui::{
     layout::Rect,
     style::{Color, Modifier, Style},
     text::{Line, Span},
-    widgets::{Block, BorderType, Borders, Clear, Paragraph},
+    widgets::{Block, Borders, Clear, Paragraph},
     Frame,
 };
 
 use crate::app::AppState;
-use crate::ui::centered_rect;
+use crate::ui::{centered_rect, theme};
 
 pub fn render_help(frame: &mut Frame, app: &AppState, area: Rect) {
     let t = app.t();
@@ -17,7 +17,7 @@ pub fn render_help(frame: &mut Frame, app: &AppState, area: Rect) {
     let block = Block::default()
         .title(t.help_title())
         .borders(Borders::ALL)
-        .border_type(BorderType::Rounded)
+        .border_type(theme::BORDER_TYPE)
         .border_style(Style::default().fg(Color::Cyan));
 
     let inner = block.inner(popup);

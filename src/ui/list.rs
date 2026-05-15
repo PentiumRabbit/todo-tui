@@ -2,7 +2,7 @@ use ratatui::{
     layout::Rect,
     style::Style,
     text::{Line, Span},
-    widgets::{Block, BorderType, Borders, List, ListItem, ListState},
+    widgets::{Block, Borders, List, ListItem, ListState},
     Frame,
 };
 use unicode_width::UnicodeWidthStr;
@@ -28,7 +28,7 @@ pub fn render_list(frame: &mut Frame, app: &AppState, area: Rect) {
     let block = Block::default()
         .title(title)
         .borders(Borders::ALL)
-        .border_type(BorderType::Rounded)
+        .border_type(theme::BORDER_TYPE)
         .border_style(border_style);
 
     // 内部可用宽度（减去左右 border 各1，再减去 highlight_symbol "▶ " 占2）
@@ -74,10 +74,7 @@ fn build_list_item(todo: &Todo, inner_width: usize, due_today_label: &str) -> Li
                 let text = format!("{}{}", prefix, truncated);
                 let w = text.as_str().width();
                 (
-                    Some(Span::styled(
-                        text,
-                        Style::default().fg(theme::FG_TEXT_DIM),
-                    )),
+                    Some(Span::styled(text, Style::default().fg(theme::FG_TEXT_DIM))),
                     w,
                 )
             } else {

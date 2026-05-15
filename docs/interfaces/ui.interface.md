@@ -8,13 +8,18 @@
 
 ## 对外方法
 
-### `ui::render(frame: &mut Frame, app: &AppState)`
+### `ui::render(frame: &mut Frame, app: &AppState) -> (Rect, Rect)`
 - 输入：ratatui Frame（当前帧），AppState 只读引用
-- 输出：无（直接绘制到 frame）
+- 输出：`(tag_panel_area, list_area)` 供鼠标命中检测
 - 约束：
   - 只读访问 AppState，不修改任何状态
   - 必须在 terminal.draw() 回调内调用
   - 根据 `app.mode` 决定渲染哪些弹窗层
+
+### `ui::render_form_areas(frame: &mut Frame, app: &AppState, area: Rect) -> FormAreas`
+- 输入：Frame、AppState 只读引用、可用区域
+- 输出：`FormAreas { title, notes, tags, priority, due_date: Rect }` 各字段布局区域
+- 约束：只读访问 AppState，不修改状态
 
 ---
 

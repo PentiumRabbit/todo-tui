@@ -19,23 +19,30 @@ impl Lang {
 
 pub struct Config {
     pub lang: Lang,
+    pub show_statusbar: bool,
     pub path: PathBuf,
 }
 
 impl Config {
     pub fn load() -> Result<Self> {
         let path = config_path();
-        let lang = if path.exists() {
+        let (lang, show_statusbar) = if path.exists() {
             let content = fs::read_to_string(&path)?;
-            if content.contains("language = \"zh\"") {
+            let lang = if content.contains("language = \"zh\"") {
                 Lang::Zh
             } else {
                 Lang::En
-            }
+            };
+            let show_statusbar = !content.contains("show_statusbar = \"false\"");
+            (lang, show_statusbar)
         } else {
-            Lang::En
+            (Lang::En, true)
         };
-        Ok(Self { lang, path })
+        Ok(Self {
+            lang,
+            show_statusbar,
+            path,
+        })
     }
 
     pub fn save(&self) -> Result<()> {
@@ -46,7 +53,14 @@ impl Config {
             Lang::En => "en",
             Lang::Zh => "zh",
         };
-        fs::write(&self.path, format!("language = \"{}\"\n", lang_str))?;
+        let statusbar_str = if self.show_statusbar { "true" } else { "false" };
+        fs::write(
+            &self.path,
+            format!(
+                "language = \"{}\"\nshow_statusbar = \"{}\"\n",
+                lang_str, statusbar_str
+            ),
+        )?;
         Ok(())
     }
 
@@ -54,11 +68,17 @@ impl Config {
         self.lang = self.lang.toggle();
         self.save()
     }
+
+    pub fn toggle_statusbar(&mut self) -> Result<()> {
+        self.show_statusbar = !self.show_statusbar;
+        self.save()
+    }
 }
 
 fn config_path() -> PathBuf {
-    dirs_next::config_dir()
+    dirs_next::home_dir()
         .unwrap_or_else(|| PathBuf::from("."))
+        .join(".config")
         .join("todo-tui")
         .join("config.toml")
 }

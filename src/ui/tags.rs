@@ -2,7 +2,7 @@ use ratatui::{
     layout::Rect,
     style::{Color, Modifier, Style},
     text::{Line, Span},
-    widgets::{Block, BorderType, Borders, List, ListItem, ListState},
+    widgets::{Block, Borders, List, ListItem, ListState},
     Frame,
 };
 
@@ -15,7 +15,7 @@ pub fn render_tag_panel(frame: &mut Frame, app: &AppState, area: Rect) {
     let block = Block::default()
         .title(t.panel_title())
         .borders(Borders::ALL)
-        .border_type(BorderType::Rounded)
+        .border_type(theme::BORDER_TYPE)
         .border_style(theme::border_for_focus(app.focus_tag_panel));
 
     let items: Vec<ListItem> = app

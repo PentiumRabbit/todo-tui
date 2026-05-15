@@ -252,4 +252,11 @@ impl Storage {
             .collect::<rusqlite::Result<Vec<String>>>()?;
         Ok(tags)
     }
+
+    /// 删除指定 tag：从 tags 表删除，todo_tags 通过外键级联删除。
+    pub fn delete_tag(&self, tag: &str) -> Result<()> {
+        self.conn
+            .execute("DELETE FROM tags WHERE name = ?1", params![tag])?;
+        Ok(())
+    }
 }

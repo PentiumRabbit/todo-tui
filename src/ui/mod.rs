@@ -9,15 +9,16 @@ use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span},
-    widgets::{Block, BorderType, Borders, Clear, Paragraph},
+    widgets::{Block, Borders, Clear, Paragraph},
     Frame,
 };
 
 use crate::app::AppState;
 use crate::models::AppMode;
+pub use form::FormAreas;
 
-/// 渲染整帧，返回 (tag_panel_area, list_area) 供调用方用于鼠标命中检测。
-pub fn render(frame: &mut Frame, app: &AppState) -> (Rect, Rect) {
+/// 渲染整帧，返回 (tag_panel_area, list_area, form_areas) 供鼠标命中检测。
+pub fn render(frame: &mut Frame, app: &AppState) -> (Rect, Rect, FormAreas) {
     let size = frame.area();
 
     if size.width < 80 || size.height < 24 {
@@ -26,15 +27,16 @@ pub fn render(frame: &mut Frame, app: &AppState) -> (Rect, Rect) {
             .block(
                 Block::default()
                     .borders(Borders::ALL)
-                    .border_type(BorderType::Rounded),
+                    .border_type(theme::BORDER_TYPE),
             );
         frame.render_widget(msg, size);
-        return (Rect::default(), Rect::default());
+        return (Rect::default(), Rect::default(), FormAreas::default());
     }
 
+    let statusbar_height = if app.config.show_statusbar { 1 } else { 0 };
     let chunks = Layout::default()
         .direction(Direction::Vertical)
-        .constraints([Constraint::Min(0), Constraint::Length(1)])
+        .constraints([Constraint::Min(0), Constraint::Length(statusbar_height)])
         .split(size);
 
     let (tag_area, list_area) = if app.show_filter_panel {
@@ -54,17 +56,28 @@ pub fn render(frame: &mut Frame, app: &AppState) -> (Rect, Rect) {
         (Rect::default(), body[0])
     };
 
-    render_status_bar(frame, app, chunks[1]);
-
-    match app.mode {
-        AppMode::Detail => detail::render_detail_popup(frame, app, size),
-        AppMode::Add | AppMode::Edit => form::render_form(frame, app, size),
-        AppMode::DeleteConfirm => render_delete_confirm(frame, app, size),
-        AppMode::Help => help::render_help(frame, app, size),
-        _ => {}
+    if app.config.show_statusbar {
+        render_status_bar(frame, app, chunks[1]);
     }
 
-    (tag_area, list_area)
+    let form_areas = match app.mode {
+        AppMode::Detail => {
+            detail::render_detail_popup(frame, app, size);
+            FormAreas::default()
+        }
+        AppMode::Add | AppMode::Edit => form::render_form(frame, app, size),
+        AppMode::DeleteConfirm => {
+            render_delete_confirm(frame, app, size);
+            FormAreas::default()
+        }
+        AppMode::Help => {
+            help::render_help(frame, app, size);
+            FormAreas::default()
+        }
+        _ => FormAreas::default(),
+    };
+
+    (tag_area, list_area, form_areas)
 }
 
 fn render_status_bar(frame: &mut Frame, app: &AppState, area: Rect) {
@@ -108,7 +121,7 @@ fn render_delete_confirm(frame: &mut Frame, app: &AppState, area: Rect) {
     let block = Block::default()
         .title(t.delete_confirm_title())
         .borders(Borders::ALL)
-        .border_type(BorderType::Rounded)
+        .border_type(theme::BORDER_TYPE)
         .border_style(Style::default().fg(Color::Red));
 
     let inner = block.inner(popup);

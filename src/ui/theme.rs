@@ -1,8 +1,10 @@
 use ratatui::style::{Color, Modifier, Style};
+use ratatui::widgets::BorderType;
 
 // ── 边框 ─────────────────────────────────────────
 pub const BORDER_ACTIVE: Color = Color::Cyan;
 pub const BORDER_INACTIVE: Color = Color::Rgb(80, 80, 80);
+pub const BORDER_TYPE: BorderType = BorderType::Plain;
 
 // ── 背景 ─────────────────────────────────────────
 pub const BG_STATUSBAR: Color = Color::Rgb(40, 40, 40);

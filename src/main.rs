@@ -254,12 +254,18 @@ fn main() -> Result<()> {
 fn run(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>, app: &mut AppState) -> Result<()> {
     use ratatui::layout::Rect;
     use std::cell::Cell;
+    use std::time::SystemTime;
     use ui::FormAreas;
 
     // 保存上一帧布局区域，供鼠标命中检测使用（初始为零区域，鼠标事件在首帧后才到来）
     let last_tag_area = Cell::new(Rect::default());
     let last_list_area = Cell::new(Rect::default());
     let last_form_areas: Cell<FormAreas> = Cell::new(FormAreas::default());
+
+    // mtime 轮询：每约 500ms（31 × 16ms）检测一次 DB 文件修改时间
+    let mut mtime_tick: u32 = 0;
+    let mut last_mtime: Option<SystemTime> = None;
+    let db = db_path();
 
     loop {
         terminal.draw(|f| {
@@ -284,6 +290,24 @@ fn run(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>, app: &mut AppState
                     )?;
                 }
                 _ => {}
+            }
+        }
+
+        // 每约 500ms 检测 DB 文件 mtime 变化
+        mtime_tick += 1;
+        if mtime_tick >= 31 {
+            mtime_tick = 0;
+            if let Ok(meta) = std::fs::metadata(&db) {
+                if let Ok(mtime) = meta.modified() {
+                    let changed = match last_mtime {
+                        None => true,
+                        Some(prev) => mtime != prev,
+                    };
+                    if changed {
+                        last_mtime = Some(mtime);
+                        app.trigger_reload();
+                    }
+                }
             }
         }
     }

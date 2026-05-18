@@ -70,6 +70,7 @@ pub struct AppState {
     pub form: FormState,
     pub error_message: Option<String>,
     pub config: Config,
+    pub pending_reload: bool,
     storage: Storage,
 }
 
@@ -97,8 +98,50 @@ impl AppState {
             form: FormState::default(),
             error_message: None,
             config,
+            pending_reload: false,
             storage,
         })
+    }
+
+    /// 触发刷新入口：由 main.rs 调用。
+    /// Add/Edit 模式下设置 pending_reload 标志，其他模式立即执行 reload。
+    pub fn trigger_reload(&mut self) {
+        match self.mode {
+            AppMode::Add | AppMode::Edit => {
+                self.pending_reload = true;
+            }
+            _ => {
+                // 失败时保持当前状态，不崩溃
+                let _ = self.reload_from_db();
+            }
+        }
+    }
+
+    /// 从 storage 重新加载 todos 和 all_tags，按 todo.id 保持 selected_index。
+    fn reload_from_db(&mut self) -> Result<()> {
+        let current_id = self.selected_todo().map(|t| t.id);
+        let new_todos = self.storage.list_todos()?;
+        let new_tags = self.storage.list_all_tags()?;
+        self.todos = new_todos;
+        self.all_tags = new_tags;
+        // 按 id 还原 selected_index
+        if let Some(id) = current_id {
+            let filtered = self.filtered_todos();
+            let pos = filtered.iter().position(|t| t.id == id);
+            self.selected_index = match pos {
+                Some(i) => i,
+                None => {
+                    let len = filtered.len();
+                    if len > 0 { len - 1 } else { 0 }
+                }
+            };
+        } else {
+            let len = self.filtered_todos().len();
+            if self.selected_index >= len && len > 0 {
+                self.selected_index = len - 1;
+            }
+        }
+        Ok(())
     }
 
     /// 返回经过滤和搜索后的 todo 列表，按 sort_order 排序。
@@ -324,6 +367,10 @@ impl AppState {
             KeyCode::Esc => {
                 self.mode = AppMode::Normal;
                 self.form = FormState::default();
+                if self.pending_reload {
+                    self.pending_reload = false;
+                    let _ = self.reload_from_db();
+                }
             }
             KeyCode::Tab => self.form_next_field(),
             KeyCode::BackTab => self.form_prev_field(),
@@ -540,6 +587,10 @@ impl AppState {
         self.all_tags = self.storage.list_all_tags()?;
         self.mode = AppMode::Normal;
         self.form = FormState::default();
+        if self.pending_reload {
+            self.pending_reload = false;
+            let _ = self.reload_from_db();
+        }
         Ok(())
     }
 
@@ -955,6 +1006,7 @@ mod tests {
                 show_statusbar: true,
                 path: std::path::PathBuf::from("/tmp/test-config.toml"),
             }),
+            pending_reload: false,
             storage,
         }
     }
@@ -1083,5 +1135,54 @@ mod tests {
 
         let selected = app.selected_todo().unwrap();
         assert_eq!(selected.title, "生活任务");
+    }
+
+    #[test]
+    fn test_trigger_reload_sets_pending_in_form_mode() {
+        let todos = vec![make_todo(1, "任务1", vec![])];
+        let mut app = make_app(todos);
+
+        // Add 模式下 trigger_reload 应设置 pending_reload 标志
+        app.mode = crate::models::AppMode::Add;
+        app.trigger_reload();
+        assert!(app.pending_reload);
+
+        // Edit 模式同样
+        app.pending_reload = false;
+        app.mode = crate::models::AppMode::Edit;
+        app.trigger_reload();
+        assert!(app.pending_reload);
+    }
+
+    #[test]
+    fn test_trigger_reload_immediate_in_normal_mode() {
+        let todos = vec![make_todo(1, "任务1", vec![])];
+        let mut app = make_app(todos);
+
+        // Normal 模式下 trigger_reload 立即执行，pending_reload 保持 false
+        app.mode = crate::models::AppMode::Normal;
+        app.trigger_reload();
+        assert!(!app.pending_reload);
+    }
+
+    #[test]
+    fn test_pending_reload_cleared_on_form_esc() {
+        let todos = vec![make_todo(1, "任务1", vec![])];
+        let mut app = make_app(todos);
+
+        // 模拟 Add 模式 + pending_reload 已设置
+        app.mode = crate::models::AppMode::Add;
+        app.pending_reload = true;
+
+        // 模拟 Esc 按键
+        let esc = crossterm::event::KeyEvent::new(
+            crossterm::event::KeyCode::Esc,
+            crossterm::event::KeyModifiers::NONE,
+        );
+        app.handle_event(esc).unwrap();
+
+        // mode 应回到 Normal，pending_reload 应清除
+        assert_eq!(app.mode, crate::models::AppMode::Normal);
+        assert!(!app.pending_reload);
     }
 }

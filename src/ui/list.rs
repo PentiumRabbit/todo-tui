@@ -59,7 +59,7 @@ fn build_list_item(todo: &Todo, inner_width: usize, due_today_label: &str) -> Li
 
     let (right_spans, right_width) = build_right_spans(todo, due_today_label);
 
-    let left_fixed = 3; // " □ "
+    let left_fixed = 2; // "□ "
     let title_chars = todo.title.as_str().width();
     let left_width = left_fixed + title_chars;
 
@@ -89,7 +89,6 @@ fn build_list_item(todo: &Todo, inner_width: usize, due_today_label: &str) -> Li
         .max(1);
 
     let mut spans = vec![
-        Span::raw(" "),
         Span::styled(icon, icon_style),
         Span::raw(" "),
         Span::styled(todo.title.clone(), title_style),

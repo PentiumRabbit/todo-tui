@@ -858,9 +858,10 @@ impl AppState {
             let idx = inner_row as usize;
             let filtered_len = self.filtered_todos().len();
             if idx < filtered_len {
-                // 列 list_area.x+3 是状态图标（border+highlight_symbol+" "+icon，去掉优先级列后）
-                let icon_col = list_area.x + 3;
-                if col == icon_col {
+                // border(1) + highlight_symbol或空格(2) + icon(1) + 空格(1) = x+5 是 title 起始
+                // icon 前所有列（x+1 到 x+4）点击均触发 toggle
+                let title_start = list_area.x + 5;
+                if col >= list_area.x + 1 && col < title_start {
                     self.selected_index = idx;
                     self.toggle_status()?;
                 } else if self.selected_index == idx && self.mode == AppMode::Normal {

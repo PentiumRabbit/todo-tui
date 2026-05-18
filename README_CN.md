@@ -33,6 +33,7 @@
 - **搜索** — 实时匹配标题、标签、备注
 - **鼠标支持** — 点击与滚轮
 - **语言切换** — `L` 键在中英文界面间切换
+- **命令行快捷添加** — 在任意终端快速记录 todo，无需打开 TUI
 
 ---
 
@@ -63,8 +64,8 @@ sudo mv todo-tui /usr/local/bin/
 
 **Ubuntu / Linux (x86_64) — `.deb` 包**
 ```bash
-curl -LO https://github.com/PentiumRabbit/todo-tui/releases/latest/download/todo-tui_0.2.0-1_amd64.deb
-sudo dpkg -i todo-tui_0.2.0-1_amd64.deb
+curl -LO https://github.com/PentiumRabbit/todo-tui/releases/latest/download/todo-tui_0.4.0-1_amd64.deb
+sudo dpkg -i todo-tui_0.4.0-1_amd64.deb
 ```
 
 **Ubuntu / Linux (x86_64) — 二进制**
@@ -97,6 +98,47 @@ todo-tui
 ```
 
 首次启动自动在 `~/.todo-tui/todos.db` 创建数据库文件。
+
+---
+
+## 命令行用法
+
+无需打开 TUI，直接在终端添加 todo：
+
+```bash
+todo-tui add <标题>
+```
+
+### 可选参数
+
+| 参数 | 可选值 | 说明 |
+|------|--------|------|
+| `-p` | `high` \| `medium` \| `low` | 设置优先级（默认：`medium`） |
+| `-t <标签>` | 任意字符串 | 添加标签（可多次使用） |
+| `-d <时间>` | `'YYYY-MM-DD HH:MM'` | 设置截止日期 |
+
+### 示例
+
+```bash
+# 添加一条简单的 todo
+todo-tui add "买菜"
+
+# 设置高优先级
+todo-tui add "部署紧急修复" -p high
+
+# 添加标签
+todo-tui add "写单元测试" -t work -t rust
+
+# 设置截止日期
+todo-tui add "提交报告" -d '2026-05-20 17:00'
+
+# 组合使用所有参数
+todo-tui add "团队会议" -p high -t work -t meeting -d '2026-05-19 10:00'
+```
+
+### TUI 自动刷新
+
+若 TUI 已在运行，通过 `todo-tui add` 添加的新条目将在约 500 ms 内自动显示，无需重启。
 
 ---
 

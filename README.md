@@ -27,6 +27,7 @@ A keyboard-driven terminal todo manager built with Rust and [ratatui](https://gi
 - **Search** — matches title, tags, and notes in real time
 - **Mouse support** — click and scroll in addition to keyboard
 - **Language toggle** — switch between English and Chinese with `L`
+- **Quick add from CLI** — add todos from any terminal without opening the TUI
 
 ---
 
@@ -69,8 +70,8 @@ sudo mv todo-tui /usr/local/bin/
 
 **Ubuntu / Linux (x86_64) — `.deb` package**
 ```bash
-curl -LO https://github.com/PentiumRabbit/todo-tui/releases/latest/download/todo-tui_0.3.0-1_amd64.deb
-sudo dpkg -i todo-tui_0.3.0-1_amd64.deb
+curl -LO https://github.com/PentiumRabbit/todo-tui/releases/latest/download/todo-tui_0.4.0-1_amd64.deb
+sudo dpkg -i todo-tui_0.4.0-1_amd64.deb
 ```
 
 **Ubuntu / Linux (x86_64) — binary**
@@ -103,6 +104,47 @@ todo-tui
 ```
 
 Data and config are created automatically on first launch at `~/.config/todo-tui/`.
+
+---
+
+## CLI Usage
+
+Add todos directly from the command line without launching the TUI:
+
+```bash
+todo-tui add <title>
+```
+
+### Options
+
+| Flag | Values | Description |
+|------|--------|-------------|
+| `-p` | `high` \| `medium` \| `low` | Set priority (default: `medium`) |
+| `-t <tag>` | any string | Add a tag (repeatable) |
+| `-d <datetime>` | `'YYYY-MM-DD HH:MM'` | Set due date |
+
+### Examples
+
+```bash
+# Add a simple todo
+todo-tui add "Buy groceries"
+
+# Add with high priority
+todo-tui add "Deploy hotfix" -p high
+
+# Add with tags
+todo-tui add "Write tests" -t work -t rust
+
+# Add with due date
+todo-tui add "Submit report" -d '2026-05-20 17:00'
+
+# Combine all options
+todo-tui add "Team meeting" -p high -t work -t meeting -d '2026-05-19 10:00'
+```
+
+### TUI Auto-refresh
+
+If the TUI is already open, new items added via `todo-tui add` will appear automatically within approximately 500 ms — no restart needed.
 
 ---
 

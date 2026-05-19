@@ -70,8 +70,8 @@ sudo mv todo-tui /usr/local/bin/
 
 **Ubuntu / Linux (x86_64) — `.deb` package**
 ```bash
-curl -LO https://github.com/PentiumRabbit/todo-tui/releases/latest/download/todo-tui_0.4.0-1_amd64.deb
-sudo dpkg -i todo-tui_0.4.0-1_amd64.deb
+curl -LO https://github.com/PentiumRabbit/todo-tui/releases/latest/download/todo-tui_0.4.1-1_amd64.deb
+sudo dpkg -i todo-tui_0.4.1-1_amd64.deb
 ```
 
 **Ubuntu / Linux (x86_64) — binary**
@@ -229,6 +229,20 @@ src/
     ├── tags.rs      # Filter panel
     └── help.rs      # Help overlay
 ```
+
+---
+
+## Changelog
+
+### v0.4.1
+
+- Add CLI quick-add support (`todo-tui add`) with priority, tag, and due-date flags
+- TUI auto-refresh within ~500 ms when new items are added via CLI
+- Language toggle (`L`) to switch between English and Chinese
+
+### v0.4.0
+
+- Initial public release
 
 ---
 

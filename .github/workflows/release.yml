@@ -13,7 +13,7 @@ jobs:
     name: Check README version
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4.2.2
+      - uses: actions/checkout@v4
       - name: Verify README mentions current tag version
         run: |
           VERSION=${GITHUB_REF_NAME#v}
@@ -40,7 +40,7 @@ jobs:
             artifact: todo-tui-x86_64-unknown-linux-gnu
 
     steps:
-      - uses: actions/checkout@v4.2.2
+      - uses: actions/checkout@v4
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -75,7 +75,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4.2.2
+      - uses: actions/checkout@v4
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -112,7 +112,7 @@ jobs:
       contents: write
 
     steps:
-      - uses: actions/checkout@v4.2.2
+      - uses: actions/checkout@v4
 
       - name: Download all artifacts
         uses: actions/download-artifact@v4
@@ -150,7 +150,7 @@ jobs:
           echo "SHA256_X86_64=$(sha256sum x86_64.tar.gz | awk '{print $1}')" >> $GITHUB_ENV
 
       - name: Checkout homebrew-tap
-        uses: actions/checkout@v4.2.2
+        uses: actions/checkout@v4
         with:
           repository: PentiumRabbit/homebrew-tap
           token: ${{ secrets.TAP_GITHUB_TOKEN }}

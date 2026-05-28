@@ -33,7 +33,8 @@ pub fn render(frame: &mut Frame, app: &AppState) -> (Rect, Rect, FormAreas) {
         return (Rect::default(), Rect::default(), FormAreas::default());
     }
 
-    let statusbar_height = if app.config.show_statusbar { 1 } else { 0 };
+    let show_bottom_bar = app.config.show_statusbar || matches!(app.mode, AppMode::Search);
+    let statusbar_height = if show_bottom_bar { 1 } else { 0 };
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([Constraint::Min(0), Constraint::Length(statusbar_height)])
@@ -56,7 +57,7 @@ pub fn render(frame: &mut Frame, app: &AppState) -> (Rect, Rect, FormAreas) {
         (Rect::default(), body[0])
     };
 
-    if app.config.show_statusbar {
+    if show_bottom_bar {
         render_status_bar(frame, app, chunks[1]);
     }
 

@@ -1,5 +1,5 @@
 use anyhow::Result;
-use crossterm::event::{KeyCode, KeyEvent, MouseButton, MouseEvent, MouseEventKind};
+use crossterm::event::{KeyCode, KeyEvent, KeyModifiers, MouseButton, MouseEvent, MouseEventKind};
 use ratatui::layout::Rect;
 
 use crate::config::Config;
@@ -67,6 +67,8 @@ pub struct AppState {
     #[allow(dead_code)]
     pub list_offset: usize,
     pub search_query: String,
+    pub regex_mode: bool,
+    pub regex_error: Option<String>,
     pub form: FormState,
     pub error_message: Option<String>,
     pub config: Config,
@@ -95,6 +97,8 @@ impl AppState {
             sort_order: SortOrder::Default,
             list_offset: 0,
             search_query: String::new(),
+            regex_mode: false,
+            regex_error: None,
             form: FormState::default(),
             error_message: None,
             config,
@@ -167,18 +171,38 @@ impl AppState {
                     FilterMode::DueToday => t.is_due_today(),
                     FilterMode::Overdue => t.is_overdue(),
                 };
-                let search_ok = match &search {
-                    None => true,
-                    Some(q) => {
-                        t.title.to_lowercase().contains(q.as_str())
-                            || t.tags
-                                .iter()
-                                .any(|tag| tag.to_lowercase().contains(q.as_str()))
-                            || t.notes
-                                .as_deref()
-                                .unwrap_or("")
-                                .to_lowercase()
-                                .contains(q.as_str())
+                let search_ok = if self.regex_mode {
+                    if self.search_query.is_empty() {
+                        true
+                    } else if self.regex_error.is_some() {
+                        false
+                    } else {
+                        match regex::RegexBuilder::new(&self.search_query)
+                            .case_insensitive(true)
+                            .build()
+                        {
+                            Ok(re) => {
+                                re.is_match(&t.title)
+                                    || t.tags.iter().any(|tag| re.is_match(tag))
+                                    || t.notes.as_deref().is_some_and(|n| re.is_match(n))
+                            }
+                            Err(_) => false,
+                        }
+                    }
+                } else {
+                    match &search {
+                        None => true,
+                        Some(q) => {
+                            t.title.to_lowercase().contains(q.as_str())
+                                || t.tags
+                                    .iter()
+                                    .any(|tag| tag.to_lowercase().contains(q.as_str()))
+                                || t.notes
+                                    .as_deref()
+                                    .unwrap_or("")
+                                    .to_lowercase()
+                                    .contains(q.as_str())
+                        }
                     }
                 };
                 filter_ok && search_ok
@@ -438,19 +462,33 @@ impl AppState {
         match event.code {
             KeyCode::Esc => {
                 self.search_query.clear();
+                self.regex_mode = false;
+                self.regex_error = None;
                 self.mode = AppMode::Normal;
                 self.selected_index = 0;
             }
             KeyCode::Enter => {
+                self.regex_mode = false;
+                self.regex_error = None;
                 self.mode = AppMode::Normal;
+                self.selected_index = 0;
+            }
+            KeyCode::Char('r') if event.modifiers.contains(KeyModifiers::CONTROL) => {
+                self.regex_mode = !self.regex_mode;
+                self.regex_error = None;
+                if self.regex_mode {
+                    self.update_regex_error();
+                }
                 self.selected_index = 0;
             }
             KeyCode::Backspace => {
                 self.search_query.pop();
+                self.update_regex_error();
                 self.selected_index = 0;
             }
             KeyCode::Char(c) => {
                 self.search_query.push(c);
+                self.update_regex_error();
                 self.selected_index = 0;
             }
             KeyCode::Up => self.move_up(),
@@ -458,6 +496,20 @@ impl AppState {
             _ => {}
         }
         Ok(AppAction::Continue)
+    }
+
+    fn update_regex_error(&mut self) {
+        if !self.regex_mode || self.search_query.is_empty() {
+            self.regex_error = None;
+            return;
+        }
+        match regex::RegexBuilder::new(&self.search_query)
+            .case_insensitive(true)
+            .build()
+        {
+            Ok(_) => self.regex_error = None,
+            Err(e) => self.regex_error = Some(e.to_string()),
+        }
     }
 
     fn handle_help(&mut self, event: KeyEvent) -> Result<AppAction> {
@@ -1004,6 +1056,8 @@ mod tests {
             sort_order: SortOrder::Default,
             list_offset: 0,
             search_query: String::new(),
+            regex_mode: false,
+            regex_error: None,
             form: crate::models::FormState::default(),
             error_message: None,
             config: crate::config::Config::load().unwrap_or_else(|_| crate::config::Config {
@@ -1157,6 +1211,121 @@ mod tests {
         app.mode = crate::models::AppMode::Edit;
         app.trigger_reload();
         assert!(app.pending_reload);
+    }
+
+    #[test]
+    fn test_regex_mode_toggle_via_ctrl_r() {
+        let mut app = make_app(vec![make_todo(1, "任务", vec![])]);
+        app.mode = crate::models::AppMode::Search;
+        assert!(!app.regex_mode);
+
+        let ctrl_r = crossterm::event::KeyEvent::new(
+            crossterm::event::KeyCode::Char('r'),
+            crossterm::event::KeyModifiers::CONTROL,
+        );
+        app.handle_event(ctrl_r).unwrap();
+        assert!(app.regex_mode);
+
+        app.handle_event(crossterm::event::KeyEvent::new(
+            crossterm::event::KeyCode::Char('r'),
+            crossterm::event::KeyModifiers::CONTROL,
+        ))
+        .unwrap();
+        assert!(!app.regex_mode);
+    }
+
+    #[test]
+    fn test_regex_match_title_case_insensitive() {
+        let todos = vec![
+            make_todo(1, "Hello World", vec![]),
+            make_todo(2, "No match", vec![]),
+        ];
+        let mut app = make_app(todos);
+        app.regex_mode = true;
+        app.search_query = "hello".to_string();
+        app.update_regex_error();
+
+        let result = app.filtered_todos();
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].title, "Hello World");
+    }
+
+    #[test]
+    fn test_regex_match_tags_and_notes() {
+        let mut todos = vec![
+            make_todo(1, "任务A", vec!["work".to_string()]),
+            make_todo(2, "任务B", vec![]),
+            make_todo(3, "任务C", vec![]),
+        ];
+        todos[2].notes = Some("see notes-work".to_string());
+        let mut app = make_app(todos);
+        app.regex_mode = true;
+        app.search_query = "work".to_string();
+        app.update_regex_error();
+
+        let result = app.filtered_todos();
+        assert_eq!(result.len(), 2);
+    }
+
+    #[test]
+    fn test_invalid_regex_returns_empty() {
+        let todos = vec![make_todo(1, "任务", vec![])];
+        let mut app = make_app(todos);
+        app.regex_mode = true;
+        app.search_query = "[invalid".to_string();
+        app.update_regex_error();
+
+        assert!(app.regex_error.is_some());
+        assert_eq!(app.filtered_todos().len(), 0);
+    }
+
+    #[test]
+    fn test_regex_empty_query_returns_all() {
+        let todos = vec![make_todo(1, "A", vec![]), make_todo(2, "B", vec![])];
+        let mut app = make_app(todos);
+        app.regex_mode = true;
+        app.search_query = String::new();
+
+        assert_eq!(app.filtered_todos().len(), 2);
+    }
+
+    #[test]
+    fn test_esc_clears_regex_state() {
+        let mut app = make_app(vec![make_todo(1, "任务", vec![])]);
+        app.mode = crate::models::AppMode::Search;
+        app.regex_mode = true;
+        app.regex_error = Some("bad regex".to_string());
+        app.search_query = "[bad".to_string();
+
+        let esc = crossterm::event::KeyEvent::new(
+            crossterm::event::KeyCode::Esc,
+            crossterm::event::KeyModifiers::NONE,
+        );
+        app.handle_event(esc).unwrap();
+
+        assert!(!app.regex_mode);
+        assert!(app.regex_error.is_none());
+        assert!(app.search_query.is_empty());
+        assert_eq!(app.mode, crate::models::AppMode::Normal);
+    }
+
+    #[test]
+    fn test_enter_clears_regex_state_keeps_query() {
+        let mut app = make_app(vec![make_todo(1, "hello", vec![])]);
+        app.mode = crate::models::AppMode::Search;
+        app.regex_mode = true;
+        app.search_query = "hello".to_string();
+        app.update_regex_error();
+
+        let enter = crossterm::event::KeyEvent::new(
+            crossterm::event::KeyCode::Enter,
+            crossterm::event::KeyModifiers::NONE,
+        );
+        app.handle_event(enter).unwrap();
+
+        assert!(!app.regex_mode);
+        assert!(app.regex_error.is_none());
+        assert_eq!(app.search_query, "hello");
     }
 
     #[test]

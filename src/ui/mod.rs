@@ -82,6 +82,34 @@ pub fn render(frame: &mut Frame, app: &AppState) -> (Rect, Rect, FormAreas) {
 }
 
 fn render_status_bar(frame: &mut Frame, app: &AppState, area: Rect) {
+    // regex mode: render colored multi-span line and return early
+    if matches!(app.mode, AppMode::Search) && app.regex_mode {
+        let re_error_prefix = "[RE:ERROR] ";
+        let re_prefix = "[RE] ";
+        let spans = if let Some(err) = &app.regex_error {
+            let max_content = area.width.saturating_sub(re_error_prefix.len() as u16) as usize;
+            let truncated = truncate_error_msg(err, max_content);
+            vec![
+                Span::styled(re_error_prefix, Style::default().fg(theme::ACTION_ERROR)),
+                Span::styled(truncated, Style::default().fg(theme::ACTION_ERROR)),
+            ]
+        } else {
+            vec![
+                Span::styled(re_prefix, Style::default().fg(theme::FG_REGEX_INDICATOR)),
+                Span::raw(app.search_query.clone()),
+            ]
+        };
+        frame.render_widget(
+            Paragraph::new(Line::from(spans)).style(
+                Style::default()
+                    .bg(theme::BG_STATUSBAR)
+                    .fg(theme::FG_STATUSBAR),
+            ),
+            area,
+        );
+        return;
+    }
+
     let t = app.t();
     let search_hint;
     let normal_hint;
@@ -108,6 +136,34 @@ fn render_status_bar(frame: &mut Frame, app: &AppState, area: Rect) {
         ),
         area,
     );
+}
+
+fn truncate_error_msg(s: &str, max_width: usize) -> String {
+    use unicode_width::UnicodeWidthChar;
+    if max_width == 0 {
+        return String::new();
+    }
+    let mut width = 0usize;
+    let mut end = s.len();
+    let mut truncated = false;
+    for (i, c) in s.char_indices() {
+        let cw = c.width().unwrap_or(0);
+        // reserve 1 column for ellipsis if there is more content
+        if width + cw > max_width.saturating_sub(1) {
+            if i < s.len() {
+                end = i;
+                truncated = true;
+            }
+            break;
+        }
+        width += cw;
+        end = i + c.len_utf8();
+    }
+    if truncated {
+        format!("{}…", &s[..end])
+    } else {
+        s.to_string()
+    }
 }
 
 fn render_delete_confirm(frame: &mut Frame, app: &AppState, area: Rect) {

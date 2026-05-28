@@ -32,6 +32,9 @@ pub const PRIORITY_HIGH: Color = Color::Rgb(200, 80, 80);
 pub const PRIORITY_MEDIUM: Color = Color::Rgb(190, 150, 50);
 pub const PRIORITY_LOW: Color = Color::Rgb(80, 140, 200);
 
+// ── 正则搜索 ──────────────────────────────────────
+pub const FG_REGEX_INDICATOR: Color = Color::Rgb(100, 200, 255); // [RE] 指示符，青蓝色
+
 // ── 操作颜色 ──────────────────────────────────────
 pub const ACTION_CONFIRM: Color = Color::Rgb(80, 200, 120);
 pub const ACTION_CANCEL: Color = Color::Rgb(200, 80, 80);

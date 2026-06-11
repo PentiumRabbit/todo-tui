@@ -1,250 +1,108 @@
-# todo-tui
+# Todo TUI
 
-A keyboard-driven terminal todo manager built with Rust and [ratatui](https://github.com/ratatui-org/ratatui).
-
-[中文](README_CN.md)
-
-![Rust](https://img.shields.io/badge/rust-1.75%2B-orange)
-![License](https://img.shields.io/badge/license-MIT-blue)
-
----
-
-## Screenshot
-
-![todo-tui](https://github.com/user-attachments/assets/4ecb1596-0387-4098-9d87-9d06da2338e5)
-
----
-
-## Features
-
-- **Filter panel** — filter by tag, status (Pending/Done/Cancelled), due today, or overdue
-- **Priority levels** — High / Medium / Low with color indicators
-- **Due dates** — precise to the minute, overdue and today's tasks highlighted
-- **Notes** — optional multi-line notes field displayed inline in the list
-- **Sort control** — cycle sort by priority / due date / created time
-- **Full CRUD** — add, edit, delete, complete, cancel
-- **Persistent storage** — SQLite at `~/.config/todo-tui/todos.db`
-- **Search** — matches title, tags, and notes in real time
-- **Mouse support** — click and scroll in addition to keyboard
-- **Language toggle** — switch between English and Chinese with `L`
-- **Quick add from CLI** — add todos from any terminal without opening the TUI
-
----
+A terminal-based todo list application built with Rust and Ratatui.
 
 ## Installation
 
-### Homebrew (macOS)
+### Cargo Install
 
-```bash
-brew tap PentiumRabbit/tap
-brew install todo-tui
-```
+bash
+cargo install --git https://github.com/yourusername/todo-tui
 
-### cargo install
 
-```bash
-cargo install todo-tui
-```
+### Source Build
 
-Or install directly from source:
-
-```bash
-cargo install --git https://github.com/PentiumRabbit/todo-tui.git
-```
-
-### Download from Release
-
-Go to the [Releases](../../releases) page and download the binary for your platform.
-
-**macOS (Apple Silicon)**
-```bash
-curl -L https://github.com/PentiumRabbit/todo-tui/releases/latest/download/todo-tui-aarch64-apple-darwin.tar.gz | tar xz
-sudo mv todo-tui /usr/local/bin/
-```
-
-**macOS (Intel)**
-```bash
-curl -L https://github.com/PentiumRabbit/todo-tui/releases/latest/download/todo-tui-x86_64-apple-darwin.tar.gz | tar xz
-sudo mv todo-tui /usr/local/bin/
-```
-
-**Ubuntu / Linux (x86_64) — `.deb` package**
-```bash
-curl -LO https://github.com/PentiumRabbit/todo-tui/releases/latest/download/todo-tui_0.4.1-1_amd64.deb
-sudo dpkg -i todo-tui_0.4.1-1_amd64.deb
-```
-
-**Ubuntu / Linux (x86_64) — binary**
-```bash
-curl -L https://github.com/PentiumRabbit/todo-tui/releases/latest/download/todo-tui-x86_64-unknown-linux-gnu.tar.gz | tar xz
-sudo mv todo-tui /usr/local/bin/
-```
-
-### Build from source
-
-```bash
-git clone https://github.com/PentiumRabbit/todo-tui.git
+bash
+git clone https://github.com/yourusername/todo-tui.git
 cd todo-tui
 cargo build --release
-./target/release/todo-tui
-```
+# Binary at ./target/release/todo-tui
 
-### Requirements
 
-- Rust 1.75+
-- Terminal size ≥ 80×24
-- macOS or Linux
+## Quick Start
 
----
-
-## Usage
-
-```bash
+bash
+# Run the application
 todo-tui
-```
 
-Data and config are created automatically on first launch at `~/.config/todo-tui/`.
+# Or if built from source
+./target/release/todo-tui
 
----
 
-## CLI Usage
+### Basic Usage
 
-Add todos directly from the command line without launching the TUI:
+- `Tab` / `Shift+Tab` — Navigate between panels
+- `Enter` — Select / confirm
+- `n` — Create new todo
+- `e` — Edit selected todo
+- `d` — Delete selected todo
+- `q` / `Esc` — Quit / go back
+- `?` — Show help
 
-```bash
-todo-tui add <title>
-```
+## Configuration
 
-### Options
+### Environment Variables
 
-| Flag | Values | Description |
-|------|--------|-------------|
-| `-p` | `high` \| `medium` \| `low` | Set priority (default: `medium`) |
-| `-t <tag>` | any string | Add a tag (repeatable) |
-| `-d <datetime>` | `'YYYY-MM-DD HH:MM'` | Set due date |
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `TODO_TUI_DATA_DIR` | `~/.todo-tui` | Directory for data storage |
+| `TODO_TUI_THEME` | `default` | UI theme (default, dark, light) |
 
-### Examples
+### Configuration File
 
-```bash
-# Add a simple todo
-todo-tui add "Buy groceries"
+Create `~/.todo-tui/config.toml`:
 
-# Add with high priority
-todo-tui add "Deploy hotfix" -p high
+toml
+[general]
+data_dir = "~/.todo-tui"
+theme = "default"
 
-# Add with tags
-todo-tui add "Write tests" -t work -t rust
+[editor]
+default_priority = "medium"
+default_category = "general"
 
-# Add with due date
-todo-tui add "Submit report" -d '2026-05-20 17:00'
+[display]
+show_completed = true
+items_per_page = 20
 
-# Combine all options
-todo-tui add "Team meeting" -p high -t work -t meeting -d '2026-05-19 10:00'
-```
-
-### TUI Auto-refresh
-
-If the TUI is already open, new items added via `todo-tui add` will appear automatically within approximately 500 ms — no restart needed.
-
----
-
-## Keyboard Shortcuts
-
-### Normal Mode
-
-| Key | Action |
-|-----|--------|
-| `j` / `↓` | Move down (wraps to top) |
-| `k` / `↑` | Move up (wraps to bottom) |
-| `g` / `Home` | Jump to top |
-| `G` / `End` | Jump to bottom |
-| `h` / `←` / `Tab` | Focus filter panel |
-| `Enter` | Open detail |
-| `a` | Add todo |
-| `e` | Edit todo |
-| `d` | Delete todo |
-| `Space` | Toggle complete |
-| `x` | Cancel todo |
-| `s` | Cycle sort order |
-| `/` | Search |
-| `H` | Toggle filter panel |
-| `B` | Toggle status bar |
-| `L` | Toggle language (En/Zh) |
-| `?` | Help |
-| `q` | Quit |
-
-### Filter Panel
-
-| Key | Action |
-|-----|--------|
-| `j` / `↓` | Move down (wraps) |
-| `k` / `↑` | Move up (wraps) |
-| `g` / `Home` | Jump to top |
-| `G` / `End` | Jump to bottom |
-| `l` / `→` / `Tab` | Focus todo list |
-| `Enter` | Select filter |
-| `D` | Delete selected tag |
-
-### Add / Edit Form
-
-| Key | Action |
-|-----|--------|
-| `Tab` | Next field |
-| `Shift+Tab` | Prev field |
-| `↑` / `↓` | Cycle priority (on Priority field) |
-| `←` / `→` | Move tag cursor (on Tags field) |
-| `Backspace` | Delete char / select & delete tag |
-| `←` / `→` | Switch date segment (on Due Date field) |
-| `↑` / `↓` / scroll | Adjust date segment value |
-| `c` | Clear due date (on Due Date field) |
-| `Enter` | Submit |
-| `Esc` | Cancel |
-
----
-
-## Data & Config
-
-| Path | Description |
-|------|-------------|
-| `~/.config/todo-tui/todos.db` | SQLite database |
-| `~/.config/todo-tui/config.toml` | Language and UI preferences |
-
----
 
 ## Project Structure
 
-```
-src/
-├── main.rs          # Entry point
-├── app.rs           # State & event handling
-├── config.rs        # Config persistence
-├── i18n.rs          # UI strings (En/Zh)
-├── models/          # Data models
-├── storage/         # SQLite persistence
-└── ui/              # Rendering
-    ├── theme.rs     # Color constants
-    ├── list.rs      # Todo list panel
-    ├── detail.rs    # Detail popup
-    ├── form.rs      # Add/edit form
-    ├── tags.rs      # Filter panel
-    └── help.rs      # Help overlay
-```
 
----
+todo-tui/
+├── Cargo.toml          # Project manifest and dependencies
+├── src/
+│   ├── main.rs         # Entry point
+│   ├── app.rs          # Application state and event loop
+│   ├── ui/             # UI rendering components
+│   │   ├── mod.rs
+│   │   ├── list.rs     # Todo list panel
+│   │   ├── detail.rs   # Todo detail panel
+│   │   └── help.rs     # Help overlay
+│   ├── models/         # Data models
+│   │   ├── mod.rs
+│   │   └── todo.rs     # Todo item struct
+│   ├── storage/        # Data persistence
+│   │   ├── mod.rs
+│   │   └── file.rs     # File-based storage
+│   └── config/         # Configuration handling
+│       ├── mod.rs
+│       └── settings.rs # Config parsing
+└── docs/               # Documentation
+    └── api.md          # API documentation
 
-## Changelog
 
-### v0.4.1
+## Dependencies
 
-- Add CLI quick-add support (`todo-tui add`) with priority, tag, and due-date flags
-- TUI auto-refresh within ~500 ms when new items are added via CLI
-- Language toggle (`L`) to switch between English and Chinese
-
-### v0.4.0
-
-- Initial public release
-
----
+| Crate | Version | Purpose |
+|-------|---------|---------|
+| [ratatui](https://crates.io/crates/ratatui) | 0.26+ | Terminal UI framework |
+| [crossterm](https://crates.io/crates/crossterm) | 0.27+ | Terminal manipulation |
+| [serde](https://crates.io/crates/serde) | 1.0+ | Serialization |
+| [serde_json](https://crates.io/crates/serde_json) | 1.0+ | JSON data format |
+| [toml](https://crates.io/crates/toml) | 0.8+ | Config file parsing |
+| [chrono](https://crates.io/crates/chrono) | 0.4+ | Date/time handling |
+| [dirs](https://crates.io/crates/dirs) | 5.0+ | System directory paths |
 
 ## License
 

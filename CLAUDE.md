@@ -6,7 +6,7 @@ todo-tui 是 Rust TUI 待办事项应用。技术栈：ratatui + crossterm + rus
 
 ## 强制规则
 
-读取 `PROJECT.md` 了解所有强制约束（M-001 ~ M-031）。核心要点：
+读取 `PROJECT.md` 了解所有强制约束。核心要点：
 
 1. **禁止 unwrap**：非测试代码中一律返回 `Result`
 2. **UI 只读**：`src/ui/` 内禁止写入 `AppState` 任何字段

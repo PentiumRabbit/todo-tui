@@ -4,3 +4,7 @@ Cargo.lock
 *.db
 .vscode/
 .idea/
+/.ai-team/
+mise.toml
+/.ai-role/*
+!/.ai-role/boot-summary.md

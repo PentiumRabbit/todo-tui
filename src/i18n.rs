@@ -441,3 +441,147 @@ impl T {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::config::Lang;
+
+    fn zh() -> T {
+        T::new(&Lang::Zh)
+    }
+
+    fn en() -> T {
+        T::new(&Lang::En)
+    }
+
+    #[test]
+    fn t_new_and_zh() {
+        assert!(zh().zh());
+        assert!(!en().zh());
+    }
+
+    #[test]
+    fn filter_all() {
+        assert_eq!(zh().filter_all(), "全部");
+        assert_eq!(en().filter_all(), "All");
+    }
+
+    #[test]
+    fn filter_pending() {
+        assert_eq!(zh().filter_pending(), "未完成");
+        assert_eq!(en().filter_pending(), "Pending");
+    }
+
+    #[test]
+    fn filter_done() {
+        assert_eq!(zh().filter_done(), "已完成");
+        assert_eq!(en().filter_done(), "Done");
+    }
+
+    #[test]
+    fn filter_cancelled() {
+        assert_eq!(zh().filter_cancelled(), "已取消");
+        assert_eq!(en().filter_cancelled(), "Cancelled");
+    }
+
+    #[test]
+    fn filter_due_today() {
+        assert_eq!(zh().filter_due_today(), "今日到期");
+        assert_eq!(en().filter_due_today(), "Due Today");
+    }
+
+    #[test]
+    fn filter_overdue() {
+        assert_eq!(zh().filter_overdue(), "已逾期");
+        assert_eq!(en().filter_overdue(), "Overdue");
+    }
+
+    #[test]
+    fn panel_title() {
+        assert_eq!(zh().panel_title(), " 过滤 ");
+        assert_eq!(en().panel_title(), " Filter ");
+    }
+
+    #[test]
+    fn statusbar_normal() {
+        assert!(zh().statusbar_normal("").contains("添加"));
+        assert!(en().statusbar_normal("").contains("Add"));
+    }
+
+    #[test]
+    fn statusbar_tag_panel() {
+        assert!(zh().statusbar_tag_panel().contains("列表"));
+        assert!(en().statusbar_tag_panel().contains("List"));
+    }
+
+    #[test]
+    fn statusbar_search() {
+        assert_eq!(zh().statusbar_search("abc"), " 搜索: abc█  [Esc] 退出");
+        assert_eq!(en().statusbar_search("abc"), " Search: abc█  [Esc] Exit");
+    }
+
+    #[test]
+    fn due_today_label() {
+        assert_eq!(zh().due_today_label(), "⚠今天");
+        assert_eq!(en().due_today_label(), "⚠Today");
+    }
+
+    #[test]
+    fn terminal_too_small() {
+        assert!(zh().terminal_too_small().contains("终端太小"));
+        assert!(en().terminal_too_small().contains("Terminal too small"));
+    }
+
+    #[test]
+    fn delete_confirm_title() {
+        assert_eq!(zh().delete_confirm_title(), " 确认删除 ");
+        assert_eq!(en().delete_confirm_title(), " Confirm Delete ");
+    }
+
+    #[test]
+    fn delete_confirm_msg() {
+        assert_eq!(zh().delete_confirm_msg("任务A"), "确定要删除 \"任务A\" 吗？");
+        assert_eq!(en().delete_confirm_msg("任务A"), "Delete \"任务A\"?");
+    }
+
+    #[test]
+    fn delete_confirm_hint() {
+        let (confirm, cancel) = zh().delete_confirm_hint();
+        assert!(confirm.contains("确认"));
+        assert!(cancel.contains("取消"));
+        let (confirm, cancel) = en().delete_confirm_hint();
+        assert!(confirm.contains("Confirm"));
+        assert!(cancel.contains("Cancel"));
+    }
+
+    #[test]
+    fn form_add_title() {
+        assert_eq!(zh().form_add_title(), " 添加 Todo ");
+        assert_eq!(en().form_add_title(), " Add Todo ");
+    }
+
+    #[test]
+    fn form_edit_title() {
+        assert_eq!(zh().form_edit_title(), " 编辑 Todo ");
+        assert_eq!(en().form_edit_title(), " Edit Todo ");
+    }
+
+    #[test]
+    fn form_field_title() {
+        assert_eq!(zh().form_field_title(), "标题");
+        assert_eq!(en().form_field_title(), "Title");
+    }
+
+    #[test]
+    fn form_field_notes() {
+        assert_eq!(zh().form_field_notes(), "备注");
+        assert_eq!(en().form_field_notes(), "Notes");
+    }
+
+    #[test]
+    fn form_field_tags() {
+        assert!(zh().form_field_tags().contains("标签"));
+        assert!(en().form_field_tags().contains("Tags"));
+    }
+}

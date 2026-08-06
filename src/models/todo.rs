@@ -131,3 +131,127 @@ pub struct NewTodo {
     pub due_date: Option<String>,
     pub notes: Option<String>,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn priority_as_str() {
+        assert_eq!(Priority::High.as_str(), "High");
+        assert_eq!(Priority::Medium.as_str(), "Medium");
+        assert_eq!(Priority::Low.as_str(), "Low");
+    }
+
+    #[test]
+    fn priority_label() {
+        assert_eq!(Priority::High.label(), "高");
+        assert_eq!(Priority::Medium.label(), "中");
+        assert_eq!(Priority::Low.label(), "低");
+    }
+
+    #[test]
+    fn priority_from_str() {
+        assert_eq!("High".parse::<Priority>().unwrap(), Priority::High);
+        assert_eq!("Medium".parse::<Priority>().unwrap(), Priority::Medium);
+        assert_eq!("Low".parse::<Priority>().unwrap(), Priority::Low);
+        assert_eq!("Unknown".parse::<Priority>().unwrap(), Priority::Medium);
+    }
+
+    #[test]
+    fn todo_status_as_str() {
+        assert_eq!(TodoStatus::Pending.as_str(), "Pending");
+        assert_eq!(TodoStatus::Done.as_str(), "Done");
+        assert_eq!(TodoStatus::Cancelled.as_str(), "Cancelled");
+    }
+
+    #[test]
+    fn todo_status_next() {
+        assert_eq!(TodoStatus::Pending.next(), TodoStatus::Done);
+        assert_eq!(TodoStatus::Done.next(), TodoStatus::Pending);
+        assert_eq!(TodoStatus::Cancelled.next(), TodoStatus::Pending);
+    }
+
+    #[test]
+    fn todo_status_from_str() {
+        assert_eq!("Done".parse::<TodoStatus>().unwrap(), TodoStatus::Done);
+        assert_eq!("Cancelled".parse::<TodoStatus>().unwrap(), TodoStatus::Cancelled);
+        assert_eq!("Unknown".parse::<TodoStatus>().unwrap(), TodoStatus::Pending);
+    }
+
+    fn make_todo(status: TodoStatus, due_date: Option<&str>) -> Todo {
+        Todo {
+            id: 1,
+            title: "Test".to_string(),
+            status,
+            priority: Priority::Medium,
+            tags: vec!["work".to_string()],
+            due_date: due_date.map(|s| s.to_string()),
+            notes: None,
+            created_at: "2026-01-01 00:00:00".to_string(),
+        }
+    }
+
+    #[test]
+    fn todo_is_completed() {
+        assert!(make_todo(TodoStatus::Done, None).is_completed());
+        assert!(!make_todo(TodoStatus::Pending, None).is_completed());
+        assert!(!make_todo(TodoStatus::Cancelled, None).is_completed());
+    }
+
+    #[test]
+    fn todo_is_cancelled() {
+        assert!(make_todo(TodoStatus::Cancelled, None).is_cancelled());
+        assert!(!make_todo(TodoStatus::Pending, None).is_cancelled());
+        assert!(!make_todo(TodoStatus::Done, None).is_cancelled());
+    }
+
+    #[test]
+    fn todo_is_overdue_pending_with_past_date() {
+        let todo = make_todo(TodoStatus::Pending, Some("2000-01-01"));
+        assert!(todo.is_overdue());
+    }
+
+    #[test]
+    fn todo_is_overdue_pending_with_future_date() {
+        let todo = make_todo(TodoStatus::Pending, Some("2999-01-01"));
+        assert!(!todo.is_overdue());
+    }
+
+    #[test]
+    fn todo_is_overdue_non_pending() {
+        assert!(!make_todo(TodoStatus::Done, Some("2000-01-01")).is_overdue());
+        assert!(!make_todo(TodoStatus::Cancelled, Some("2000-01-01")).is_overdue());
+    }
+
+    #[test]
+    fn todo_is_overdue_no_due_date() {
+        assert!(!make_todo(TodoStatus::Pending, None).is_overdue());
+    }
+
+    #[test]
+    fn todo_is_due_today_pending() {
+        let today = chrono::Local::now().format("%Y-%m-%d").to_string();
+        let todo = make_todo(TodoStatus::Pending, Some(&today));
+        assert!(todo.is_due_today());
+    }
+
+    #[test]
+    fn todo_is_due_today_non_pending() {
+        let today = chrono::Local::now().format("%Y-%m-%d").to_string();
+        assert!(!make_todo(TodoStatus::Done, Some(&today)).is_due_today());
+        assert!(!make_todo(TodoStatus::Cancelled, Some(&today)).is_due_today());
+    }
+
+    #[test]
+    fn todo_is_due_today_no_due_date() {
+        assert!(!make_todo(TodoStatus::Pending, None).is_due_today());
+    }
+
+    #[test]
+    fn todo_is_due_today_datetime_format() {
+        let today = chrono::Local::now().format("%Y-%m-%d %H:%M").to_string();
+        let todo = make_todo(TodoStatus::Pending, Some(&today));
+        assert!(todo.is_due_today());
+    }
+}

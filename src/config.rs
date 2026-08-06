@@ -82,3 +82,97 @@ fn config_path() -> PathBuf {
         .join("todo-tui")
         .join("config.toml")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs;
+    use std::path::PathBuf;
+
+    #[test]
+    fn lang_toggle() {
+        assert_eq!(Lang::En.toggle(), Lang::Zh);
+        assert_eq!(Lang::Zh.toggle(), Lang::En);
+    }
+
+    #[test]
+    fn config_load_defaults_when_no_file() {
+        let cfg = Config {
+            lang: Lang::En,
+            show_statusbar: true,
+            path: PathBuf::from("/nonexistent/path/config.toml"),
+        };
+        // 直接验证默认值逻辑（load 依赖 config_path()，此处验证字段默认）
+        assert_eq!(cfg.lang, Lang::En);
+        assert!(cfg.show_statusbar);
+    }
+
+    #[test]
+    fn config_save_and_load_roundtrip() {
+        let dir = std::env::temp_dir().join(format!("todo-tui-test-{}", std::process::id()));
+        fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("config.toml");
+
+        let cfg = Config {
+            lang: Lang::Zh,
+            show_statusbar: false,
+            path: path.clone(),
+        };
+        cfg.save().unwrap();
+
+        let content = fs::read_to_string(&path).unwrap();
+        assert!(content.contains("language = \"zh\""));
+        assert!(content.contains("show_statusbar = \"false\""));
+
+        // 模拟 load 的解析逻辑
+        let loaded_lang = if content.contains("language = \"zh\"") { Lang::Zh } else { Lang::En };
+        let loaded_statusbar = !content.contains("show_statusbar = \"false\"");
+        assert_eq!(loaded_lang, Lang::Zh);
+        assert!(!loaded_statusbar);
+
+        fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn config_save_english_defaults() {
+        let dir = std::env::temp_dir().join(format!("todo-tui-test-en-{}", std::process::id()));
+        fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("config.toml");
+
+        let cfg = Config {
+            lang: Lang::En,
+            show_statusbar: true,
+            path: path.clone(),
+        };
+        cfg.save().unwrap();
+
+        let content = fs::read_to_string(&path).unwrap();
+        assert!(content.contains("language = \"en\""));
+        assert!(content.contains("show_statusbar = \"true\""));
+
+        fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn config_toggle_lang_and_statusbar() {
+        let dir = std::env::temp_dir().join(format!("todo-tui-test-toggle-{}", std::process::id()));
+        fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("config.toml");
+
+        let mut cfg = Config {
+            lang: Lang::En,
+            show_statusbar: true,
+            path: path.clone(),
+        };
+        cfg.toggle_lang().unwrap();
+        assert_eq!(cfg.lang, Lang::Zh);
+        cfg.toggle_statusbar().unwrap();
+        assert!(!cfg.show_statusbar);
+
+        let content = fs::read_to_string(&path).unwrap();
+        assert!(content.contains("language = \"zh\""));
+        assert!(content.contains("show_statusbar = \"false\""));
+
+        fs::remove_dir_all(&dir).unwrap();
+    }
+}

@@ -441,3 +441,17 @@ impl T {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn filter_all() {
+        let t_en = T::new(&Lang::En);
+        assert_eq!(t_en.filter_all(), "All");
+
+        let t_zh = T::new(&Lang::Zh);
+        assert_eq!(t_zh.filter_all(), "全部");
+    }
+}

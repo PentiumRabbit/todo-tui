@@ -82,3 +82,15 @@ fn config_path() -> PathBuf {
         .join("todo-tui")
         .join("config.toml")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn lang_toggle() {
+        let lang = Lang::En;
+        assert_eq!(lang.toggle(), Lang::Zh);
+        assert_eq!(lang.toggle().toggle(), Lang::En);
+    }
+}

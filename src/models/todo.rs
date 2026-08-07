@@ -197,4 +197,37 @@ mod tests {
         let todo = make_todo(TodoStatus::Pending, None);
         assert!(!todo.is_due_today());
     }
+
+    #[test]
+    fn test_todo_defaults_and_status() {
+        // 正常路径：构造 Todo 并验证字段默认值、优先级/状态转换、is_completed 判断
+        let todo = make_todo(TodoStatus::Pending, None);
+        assert_eq!(todo.title, "测试任务");
+        assert_eq!(todo.priority.as_str(), "中");
+        assert_eq!(todo.status.as_str(), "Pending");
+        assert!(!todo.is_completed());
+
+        // 验证 label() 方法
+        assert_eq!(todo.priority.label(), "Medium");
+    }
+
+    #[test]
+    fn test_todo_empty_title() {
+        // 边界/异常路径：空标题构造 Todo
+        let todo = Todo {
+            id: 1,
+            title: "".to_string(),
+            status: TodoStatus::Pending,
+            priority: Priority::Medium,
+            tags: vec![],
+            due_date: None,
+            notes: None,
+            created_at: "2026-01-01T00:00:00".to_string(),
+        };
+        assert_eq!(todo.title, "");
+        assert_eq!(todo.status.as_str(), "Pending");
+        assert!(!todo.is_completed());
+    }
+
 }
+

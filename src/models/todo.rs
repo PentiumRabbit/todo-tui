@@ -131,3 +131,70 @@ pub struct NewTodo {
     pub due_date: Option<String>,
     pub notes: Option<String>,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use chrono::{Duration, Local};
+
+    fn make_todo(status: TodoStatus, due_date: Option<&str>) -> Todo {
+        Todo {
+            id: 1,
+            title: "测试任务".to_string(),
+            status,
+            priority: Priority::Medium,
+            tags: vec![],
+            due_date: due_date.map(|s| s.to_string()),
+            notes: None,
+            created_at: "2026-01-01T00:00:00".to_string(),
+        }
+    }
+
+    #[test]
+    fn test_todo_is_overdue_boundary() {
+        let now = Local::now().naive_local();
+        let today = now.date();
+
+        // 无截止日期 → 不过期
+        let todo = make_todo(TodoStatus::Pending, None);
+        assert!(!todo.is_overdue());
+
+        // 已完成任务 → 不过期（即使截止日期在过去）
+        let past = (today - Duration::days(1)).format("%Y-%m-%d").to_string();
+        let todo = make_todo(TodoStatus::Done, Some(&past));
+        assert!(!todo.is_overdue());
+
+        // 未来日期 → 不过期
+        let future = (today + Duration::days(1)).format("%Y-%m-%d").to_string();
+        let todo = make_todo(TodoStatus::Pending, Some(&future));
+        assert!(!todo.is_overdue());
+
+        // 过去日期 → 过期
+        let todo = make_todo(TodoStatus::Pending, Some(&past));
+        assert!(todo.is_overdue());
+    }
+
+    #[test]
+    fn test_todo_is_due_today_boundary() {
+        let now = Local::now().naive_local();
+        let today = now.date();
+
+        // 今天 → 是今天到期
+        let today_str = today.format("%Y-%m-%d").to_string();
+        let todo = make_todo(TodoStatus::Pending, Some(&today_str));
+        assert!(todo.is_due_today());
+
+        // 非今天（明天）→ 不是今天到期
+        let tomorrow = (today + Duration::days(1)).format("%Y-%m-%d").to_string();
+        let todo = make_todo(TodoStatus::Pending, Some(&tomorrow));
+        assert!(!todo.is_due_today());
+
+        // 已完成任务 → 不是今天到期（即使截止日期是今天）
+        let todo = make_todo(TodoStatus::Done, Some(&today_str));
+        assert!(!todo.is_due_today());
+
+        // 无截止日期 → 不是今天到期
+        let todo = make_todo(TodoStatus::Pending, None);
+        assert!(!todo.is_due_today());
+    }
+}

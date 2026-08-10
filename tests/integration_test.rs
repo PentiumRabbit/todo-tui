@@ -38,44 +38,96 @@ mod storage_tests {
                 title TEXT NOT NULL,
                 completed INTEGER NOT NULL DEFAULT 0,
                 priority TEXT NOT NULL DEFAULT 'Medium',
-                category_id INTEGER,
-                due_date TEXT,
-                created_at TEXT NOT NULL
+                due_date TEXT
             );",
         )
         .unwrap();
 
-        // 插入
         conn.execute(
-            "INSERT INTO todos (title, completed, priority, created_at) VALUES ('测试任务', 0, 'High', '2026-04-23T10:00:00')",
-            [],
-        ).unwrap();
-        let id = conn.last_insert_rowid();
-
-        // 查询
-        let title: String = conn
-            .query_row(
-                "SELECT title FROM todos WHERE id = ?1",
-                rusqlite::params![id],
-                |r| r.get(0),
-            )
-            .unwrap();
-        assert_eq!(title, "测试任务");
-
-        // 更新
-        conn.execute(
-            "UPDATE todos SET completed = 1 WHERE id = ?1",
-            rusqlite::params![id],
+            "INSERT INTO todos (title, completed) VALUES (?1, ?2)",
+            rusqlite::params!["测试任务", 0],
         )
         .unwrap();
+
+        let count: i64 = conn
+            .query_row("SELECT COUNT(*) FROM todos", [], |row| row.get(0))
+            .unwrap();
+        assert_eq!(count, 1);
+    }
+
+    #[test]
+    fn test_insert_and_query_todo() {
+        let tmp = tempfile::tempdir().unwrap();
+        let db_path = test_db(tmp.path());
+        let conn = rusqlite::Connection::open(&db_path).unwrap();
+        conn.execute_batch(
+            "CREATE TABLE todos (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                title TEXT NOT NULL,
+                completed INTEGER NOT NULL DEFAULT 0
+            );",
+        )
+        .unwrap();
+
+        conn.execute(
+            "INSERT INTO todos (title, completed) VALUES (?1, ?2)",
+            rusqlite::params!["测试任务", 0],
+        )
+        .unwrap();
+
+        let mut stmt = conn
+            .prepare("SELECT id, title, completed FROM todos WHERE title = ?1")
+            .unwrap();
+        let todo = stmt
+            .query_row(rusqlite::params!["测试任务"], |row| {
+                Ok((row.get::<_, i64>(0)?, row.get::<_, String>(1)?, row.get::<_, i64>(2)?))
+            })
+            .unwrap();
+
+        assert_eq!(todo.0, 1);
+        assert_eq!(todo.1, "测试任务");
+        assert_eq!(todo.2, 0);
+    }
+
+    #[test]
+    fn test_update_todo_status() {
+        let tmp = tempfile::tempdir().unwrap();
+        let db_path = test_db(tmp.path());
+        let conn = rusqlite::Connection::open(&db_path).unwrap();
+        conn.execute_batch(
+            "CREATE TABLE todos (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                title TEXT NOT NULL,
+                completed INTEGER NOT NULL DEFAULT 0
+            );",
+        )
+        .unwrap();
+
+        conn.execute(
+            "INSERT INTO todos (title, completed) VALUES (?1, ?2)",
+            rusqlite::params!["待更新任务", 0],
+        )
+        .unwrap();
+
+        conn.execute(
+            "UPDATE todos SET completed = ?1 WHERE title = ?2",
+            rusqlite::params![1, "待更新任务"],
+        )
+        .unwrap();
+
         let completed: i64 = conn
             .query_row(
-                "SELECT completed FROM todos WHERE id = ?1",
-                rusqlite::params![id],
-                |r| r.get(0),
+                "SELECT completed FROM todos WHERE title = ?1",
+                rusqlite::params!["待更新任务"],
+                |row| row.get(0),
             )
             .unwrap();
+
         assert_eq!(completed, 1);
+<<<<<<< HEAD
+    }
+}
+=======
 
         // 删除
         conn.execute("DELETE FROM todos WHERE id = ?1", rusqlite::params![id])
@@ -296,5 +348,5 @@ mod storage_tests {
         // 日期越界 2026-04-31 非法（4月只有30天）
         let bad_day = "2026-04-31".parse::<NaiveDate>();
         assert!(bad_day.is_err());
-    }
-}
+    }}
+>>>>>>> ai-task-12

@@ -296,5 +296,4 @@ mod storage_tests {
         // 日期越界 2026-04-31 非法（4月只有30天）
         let bad_day = "2026-04-31".parse::<NaiveDate>();
         assert!(bad_day.is_err());
-    }
-}
+    }}

@@ -124,12 +124,9 @@ mod storage_tests {
             .unwrap();
 
         assert_eq!(completed, 1);
-<<<<<<< HEAD
-    }
-}
-=======
 
         // 删除
+        let id: i64 = conn.query_row("SELECT id FROM todos WHERE title = ?1", rusqlite::params!["待更新任务"], |r| r.get(0)).unwrap();
         conn.execute("DELETE FROM todos WHERE id = ?1", rusqlite::params![id])
             .unwrap();
         let count: i64 = conn
@@ -348,5 +345,59 @@ mod storage_tests {
         // 日期越界 2026-04-31 非法（4月只有30天）
         let bad_day = "2026-04-31".parse::<NaiveDate>();
         assert!(bad_day.is_err());
-    }}
->>>>>>> ai-task-12
+}
+
+    #[test]
+    fn test_delete_todo() {
+        let tmp = tempfile::tempdir().unwrap();
+        let db_path = test_db(tmp.path());
+        let conn = rusqlite::Connection::open(&db_path).unwrap();
+        conn.execute_batch(
+            "CREATE TABLE todos (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT NOT NULL, completed INTEGER NOT NULL DEFAULT 0, category_id INTEGER, created_at TEXT NOT NULL, updated_at TEXT NOT NULL);",
+        )
+        .unwrap();
+
+        conn.execute(
+            "INSERT INTO todos (title, completed, created_at, updated_at) VALUES (?1, 0, '2026-01-01', '2026-01-01')",
+            rusqlite::params!["待删除任务"],
+        )
+        .unwrap();
+
+        let id: i64 = conn.query_row("SELECT id FROM todos WHERE title = ?1", rusqlite::params!["待删除任务"], |r| r.get(0)).unwrap();
+
+        conn.execute("DELETE FROM todos WHERE id = ?1", rusqlite::params![id]).unwrap();
+
+        let count: i64 = conn.query_row("SELECT COUNT(*) FROM todos", [], |r| r.get(0)).unwrap();
+        assert_eq!(count, 0);
+    }
+
+    #[test]
+    fn test_query_todo_by_id() {
+        let tmp = tempfile::tempdir().unwrap();
+        let db_path = test_db(tmp.path());
+        let conn = rusqlite::Connection::open(&db_path).unwrap();
+        conn.execute_batch(
+            "CREATE TABLE todos (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT NOT NULL, completed INTEGER NOT NULL DEFAULT 0, category_id INTEGER, created_at TEXT NOT NULL, updated_at TEXT NOT NULL);",
+        )
+        .unwrap();
+
+        conn.execute(
+            "INSERT INTO todos (title, completed, created_at, updated_at) VALUES (?1, 1, '2026-01-01', '2026-01-01')",
+            rusqlite::params!["查询任务"],
+        )
+        .unwrap();
+
+        let id: i64 = conn.query_row("SELECT id FROM todos WHERE title = ?1", rusqlite::params!["查询任务"], |r| r.get(0)).unwrap();
+
+        let (title, completed): (String, i64) = conn
+            .query_row(
+                "SELECT title, completed FROM todos WHERE id = ?1",
+                rusqlite::params![id],
+                |r| Ok((r.get(0)?, r.get(1)?)),
+            )
+            .unwrap();
+
+        assert_eq!(title, "查询任务");
+        assert_eq!(completed, 1);
+    }
+}

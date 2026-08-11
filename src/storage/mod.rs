@@ -280,41 +280,25 @@ mod tests {
         let new_todo = NewTodo {
             title: "测试任务".to_string(),
             priority: Priority::Medium,
-<<<<<<< HEAD
             tags: vec!["工作".to_string()],
-=======
-            tags: vec![],
->>>>>>> ai-task-77
             due_date: None,
             notes: Some("测试备注".to_string()),
         };
 
-<<<<<<< HEAD
         let todo = storage.insert_todo(&new_todo).unwrap();
         assert_eq!(todo.title, "测试任务");
         assert_eq!(todo.priority, Priority::Medium);
         assert_eq!(todo.notes.as_deref(), Some("测试备注"));
         assert_eq!(todo.status, TodoStatus::Pending);
-=======
-        let todo = storage.create_todo(new_todo).unwrap();
-        assert_eq!(todo.title, "测试任务");
-        assert_eq!(todo.notes.as_deref(), Some("测试备注"));
-        assert_eq!(todo.priority, Priority::Medium);
->>>>>>> ai-task-77
 
         // 通过查询获取并验证字段
         let todos = storage.list_todos().unwrap();
         let fetched = todos.iter().find(|t| t.id == todo.id).unwrap();
         assert_eq!(fetched.id, todo.id);
         assert_eq!(fetched.title, "测试任务");
-<<<<<<< HEAD
         assert_eq!(fetched.priority, Priority::Medium);
         assert_eq!(fetched.notes.as_deref(), Some("测试备注"));
         assert_eq!(fetched.status, TodoStatus::Pending);
-=======
-        assert_eq!(fetched.notes.as_deref(), Some("测试备注"));
-        assert_eq!(fetched.priority, Priority::Medium);
->>>>>>> ai-task-77
 
         fs::remove_file(&db_path).ok();
     }
@@ -332,21 +316,12 @@ mod tests {
             notes: None,
         };
 
-<<<<<<< HEAD
         let todo = storage.insert_todo(&new_todo).unwrap();
         assert_eq!(todo.status, TodoStatus::Pending);
 
         // 归档：将 status 更新为 Done（表示已归档）
         let mut archived_todo = todo.clone();
         archived_todo.status = TodoStatus::Done;
-=======
-        let todo = storage.create_todo(new_todo).unwrap();
-        assert_eq!(todo.status, TodoStatus::Pending);
-
-        // 归档：将 status 更新为已归档（TodoStatus 无 Archived 变体，使用 Done 或类似变体）
-        let mut archived_todo = todo.clone();
-        archived_todo.status = TodoStatus::Done; // 假设 Done 表示已归档
->>>>>>> ai-task-77
         storage.update_todo(&archived_todo).unwrap();
 
         let todos = storage.list_todos().unwrap();

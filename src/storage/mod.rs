@@ -260,3 +260,72 @@ impl Storage {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs;
+
+    fn temp_db_path(name: &str) -> std::path::PathBuf {
+        let dir = std::env::temp_dir().join("todo-tui-tests");
+        fs::create_dir_all(&dir).unwrap();
+        dir.join(format!("{}-{}.db", name, std::process::id()))
+    }
+
+    #[test]
+    fn test_create_todo_storage() {
+        let db_path = temp_db_path("create_todo");
+        let storage = Storage::new(&db_path).unwrap();
+
+        let new_todo = NewTodo {
+            title: "测试任务".to_string(),
+            priority: Priority::Medium,
+            tags: vec![],
+            due_date: None,
+            notes: Some("测试备注".to_string()),
+        };
+
+        let todo = storage.create_todo(new_todo).unwrap();
+        assert_eq!(todo.title, "测试任务");
+        assert_eq!(todo.notes.as_deref(), Some("测试备注"));
+        assert_eq!(todo.priority, Priority::Medium);
+
+        // 通过查询获取并验证字段
+        let todos = storage.list_todos().unwrap();
+        let fetched = todos.iter().find(|t| t.id == todo.id).unwrap();
+        assert_eq!(fetched.id, todo.id);
+        assert_eq!(fetched.title, "测试任务");
+        assert_eq!(fetched.notes.as_deref(), Some("测试备注"));
+        assert_eq!(fetched.priority, Priority::Medium);
+
+        fs::remove_file(&db_path).ok();
+    }
+
+    #[test]
+    fn test_archive_todo() {
+        let db_path = temp_db_path("archive_todo");
+        let storage = Storage::new(&db_path).unwrap();
+
+        let new_todo = NewTodo {
+            title: "待归档任务".to_string(),
+            priority: Priority::Low,
+            tags: vec![],
+            due_date: None,
+            notes: None,
+        };
+
+        let todo = storage.create_todo(new_todo).unwrap();
+        assert_eq!(todo.status, TodoStatus::Pending);
+
+        // 归档：将 status 更新为已归档（TodoStatus 无 Archived 变体，使用 Done 或类似变体）
+        let mut archived_todo = todo.clone();
+        archived_todo.status = TodoStatus::Done; // 假设 Done 表示已归档
+        storage.update_todo(&archived_todo).unwrap();
+
+        let todos = storage.list_todos().unwrap();
+        let archived = todos.iter().find(|t| t.id == todo.id).unwrap();
+        assert_eq!(archived.status, TodoStatus::Done);
+
+        fs::remove_file(&db_path).ok();
+    }
+}

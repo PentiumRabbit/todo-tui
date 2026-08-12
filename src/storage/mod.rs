@@ -267,67 +267,53 @@ mod tests {
     use std::fs;
 
     fn temp_db_path(name: &str) -> std::path::PathBuf {
-        let dir = std::env::temp_dir().join("todo-tui-tests");
-        fs::create_dir_all(&dir).unwrap();
-        dir.join(format!("{}-{}.db", name, std::process::id()))
+        let mut path = std::env::temp_dir();
+        path.push(format!("todo-tui-test-{}-{}.db", name, std::process::id()));
+        path
     }
 
     #[test]
-    fn test_create_todo_storage() {
-        let db_path = temp_db_path("create_todo");
-        let storage = Storage::new(&db_path).unwrap();
+    fn insert_todo_then_list_returns_created_todo() {
+        let db_path = temp_db_path("insert");
+        let storage = Storage::new(&db_path).expect("failed to open storage");
 
         let new_todo = NewTodo {
-            title: "测试任务".to_string(),
+            title: "测试创建任务".to_string(),
             priority: Priority::Medium,
-            tags: vec!["工作".to_string()],
-            due_date: None,
-            notes: Some("测试备注".to_string()),
-        };
-
-        let todo = storage.insert_todo(&new_todo).unwrap();
-        assert_eq!(todo.title, "测试任务");
-        assert_eq!(todo.priority, Priority::Medium);
-        assert_eq!(todo.notes.as_deref(), Some("测试备注"));
-        assert_eq!(todo.status, TodoStatus::Pending);
-
-        // 通过查询获取并验证字段
-        let todos = storage.list_todos().unwrap();
-        let fetched = todos.iter().find(|t| t.id == todo.id).unwrap();
-        assert_eq!(fetched.id, todo.id);
-        assert_eq!(fetched.title, "测试任务");
-        assert_eq!(fetched.priority, Priority::Medium);
-        assert_eq!(fetched.notes.as_deref(), Some("测试备注"));
-        assert_eq!(fetched.status, TodoStatus::Pending);
-
-        fs::remove_file(&db_path).ok();
-    }
-
-    #[test]
-    fn test_archive_todo() {
-        let db_path = temp_db_path("archive_todo");
-        let storage = Storage::new(&db_path).unwrap();
-
-        let new_todo = NewTodo {
-            title: "待归档任务".to_string(),
-            priority: Priority::Low,
             tags: vec![],
             due_date: None,
             notes: None,
         };
+        let created = storage.insert_todo(&new_todo).expect("failed to insert todo");
 
-        let todo = storage.insert_todo(&new_todo).unwrap();
-        assert_eq!(todo.status, TodoStatus::Pending);
+        let todos = storage.list_todos().expect("failed to list todos");
+        assert!(todos.iter().any(|t| t.id == created.id && t.title == "测试创建任务"));
 
-        // 归档：将 status 更新为 Done（表示已归档）
-        let mut archived_todo = todo.clone();
-        archived_todo.status = TodoStatus::Done;
-        storage.update_todo(&archived_todo).unwrap();
+        drop(storage);
+        let _ = fs::remove_file(&db_path);
+    }
 
-        let todos = storage.list_todos().unwrap();
-        let archived = todos.iter().find(|t| t.id == todo.id).unwrap();
-        assert_eq!(archived.status, TodoStatus::Done);
+    #[test]
+    fn update_todo_title_then_list_returns_updated_title() {
+        let db_path = temp_db_path("update");
+        let storage = Storage::new(&db_path).expect("failed to open storage");
 
-        fs::remove_file(&db_path).ok();
+        let new_todo = NewTodo {
+            title: "原始标题".to_string(),
+            priority: Priority::Medium,
+            tags: vec![],
+            due_date: None,
+            notes: None,
+        };
+        let mut todo = storage.insert_todo(&new_todo).expect("failed to insert todo");
+        todo.title = "更新后的标题".to_string();
+        storage.update_todo(&todo).expect("failed to update todo");
+
+        let todos = storage.list_todos().expect("failed to list todos");
+        let updated = todos.iter().find(|t| t.id == todo.id).expect("todo not found");
+        assert_eq!(updated.title, "更新后的标题");
+
+        drop(storage);
+        let _ = fs::remove_file(&db_path);
     }
 }

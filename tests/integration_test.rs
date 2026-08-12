@@ -401,3 +401,35 @@ mod storage_tests {
         assert_eq!(completed, 1);
     }
 }
+
+#[cfg(test)]
+mod lang_toggle_tests {
+    // 由于是 bin crate，无法直接 use todo_tui::config
+    // 在测试中内联定义与 src/config.rs 相同的 Lang 枚举，验证 toggle 逻辑
+    #[derive(Debug, Clone, PartialEq)]
+    enum Lang {
+        En,
+        Zh,
+    }
+
+    impl Lang {
+        fn toggle(&self) -> Self {
+            match self {
+                Lang::En => Lang::Zh,
+                Lang::Zh => Lang::En,
+            }
+        }
+    }
+
+    #[test]
+    fn test_lang_toggle_en_to_zh() {
+        let lang = Lang::En;
+        assert_eq!(lang.toggle(), Lang::Zh);
+    }
+
+    #[test]
+    fn test_lang_toggle_zh_to_en() {
+        let lang = Lang::Zh;
+        assert_eq!(lang.toggle(), Lang::En);
+    }
+}

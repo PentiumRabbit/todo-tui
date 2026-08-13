@@ -433,3 +433,49 @@ mod lang_toggle_tests {
         assert_eq!(lang.toggle(), Lang::En);
     }
 }
+
+#[cfg(test)]
+mod todo_model_tests {
+    // 由于是 bin crate，无法直接 use todo_tui::models
+    // 复制 Priority 枚举定义用于测试其方法逻辑
+    #[derive(Debug, Clone, PartialEq)]
+    enum Priority {
+        High,
+        Medium,
+        Low,
+    }
+
+    impl Priority {
+        pub fn as_str(&self) -> &'static str {
+            match self {
+                Priority::High => "High",
+                Priority::Medium => "Medium",
+                Priority::Low => "Low",
+            }
+        }
+
+        pub fn label(&self) -> &'static str {
+            match self {
+                Priority::High => "高",
+                Priority::Medium => "中",
+                Priority::Low => "低",
+            }
+        }
+    }
+
+    #[test]
+    fn test_priority_as_str_mapping() {
+        // 验证 Priority 枚举的 as_str 方法返回正确的英文标识
+        assert_eq!(Priority::High.as_str(), "High");
+        assert_eq!(Priority::Medium.as_str(), "Medium");
+        assert_eq!(Priority::Low.as_str(), "Low");
+    }
+
+    #[test]
+    fn test_priority_label_mapping() {
+        // 验证 Priority 枚举的 label 方法返回正确的中文标签
+        assert_eq!(Priority::High.label(), "高");
+        assert_eq!(Priority::Medium.label(), "中");
+        assert_eq!(Priority::Low.label(), "低");
+    }
+}

@@ -479,3 +479,80 @@ mod todo_model_tests {
         assert_eq!(Priority::Low.label(), "低");
     }
 }
+
+    #[test]
+    fn test_todo_crud_lifecycle() {
+        let tmp = tempfile::tempdir().unwrap();
+        let db_path = test_db(tmp.path());
+        let conn = rusqlite::Connection::open(&db_path).unwrap();
+        conn.execute_batch(
+            "CREATE TABLE IF NOT EXISTS todos (\n                id INTEGER PRIMARY KEY AUTOINCREMENT,\n                title TEXT NOT NULL,\n                description TEXT,\n                priority TEXT NOT NULL DEFAULT 'Medium',\n                due_date TEXT,\n                status TEXT NOT NULL DEFAULT 'Pending',\n                created_at TEXT NOT NULL,\n                updated_at TEXT NOT NULL\n            );",
+        ).unwrap();
+
+        // 创建任务
+        conn.execute(
+            "INSERT INTO todos (title, description, priority, due_date, status, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?6)",
+            rusqlite::params!["测试任务", "这是一个测试任务", "High", "2026-08-20", "Pending", "2026-08-14T08:00:00"],
+        ).unwrap();
+
+        // 查询任务
+        let count: i64 = conn.query_row("SELECT COUNT(*) FROM todos", [], |row| row.get(0)).unwrap();
+        assert_eq!(count, 1);
+        let title: String = conn.query_row("SELECT title FROM todos WHERE id = 1", [], |row| row.get(0)).unwrap();
+        assert_eq!(title, "测试任务");
+
+        // 更新任务
+        conn.execute(
+            "UPDATE todos SET title = ?1, status = ?2, updated_at = ?3 WHERE id = 1",
+            rusqlite::params!["已更新的任务", "Completed", "2026-08-14T09:00:00"],
+        ).unwrap();
+        let updated_title: String = conn.query_row("SELECT title FROM todos WHERE id = 1", [], |row| row.get(0)).unwrap();
+        assert_eq!(updated_title, "已更新的任务");
+        let status: String = conn.query_row("SELECT status FROM todos WHERE id = 1", [], |row| row.get(0)).unwrap();
+        assert_eq!(status, "Completed");
+
+        // 删除任务
+        conn.execute("DELETE FROM todos WHERE id = 1", []).unwrap();
+        let count_after_delete: i64 = conn.query_row("SELECT COUNT(*) FROM todos", [], |row| row.get(0)).unwrap();
+        assert_eq!(count_after_delete, 0);
+    }
+
+    #[test]
+    fn test_todo_crud_edge_cases() {
+        let tmp = tempfile::tempdir().unwrap();
+        let db_path = test_db(tmp.path());
+        let conn = rusqlite::Connection::open(&db_path).unwrap();
+        conn.execute_batch(
+            "CREATE TABLE IF NOT EXISTS todos (\n                id INTEGER PRIMARY KEY AUTOINCREMENT,\n                title TEXT NOT NULL,\n                description TEXT,\n                priority TEXT NOT NULL DEFAULT 'Medium',\n                due_date TEXT,\n                status TEXT NOT NULL DEFAULT 'Pending',\n                created_at TEXT NOT NULL,\n                updated_at TEXT NOT NULL\n            );",
+        ).unwrap();
+
+        // 删除不存在的任务（不应报错，影响行数为 0）
+        let deleted = conn.execute("DELETE FROM todos WHERE id = 999", []).unwrap();
+        assert_eq!(deleted, 0);
+
+        // 更新不存在的任务（不应报错，影响行数为 0）
+        let updated = conn.execute(
+            "UPDATE todos SET title = ?1 WHERE id = 999",
+            rusqlite::params!["不存在的任务"],
+        ).unwrap();
+        assert_eq!(updated, 0);
+
+        // 查询不存在的任务（返回 None）
+        let result = conn.query_row("SELECT title FROM todos WHERE id = 999", [], |row| row.get::<_, String>(0));
+        assert!(result.is_err());
+
+        // 创建多个任务后删除其中一个，验证其他任务不受影响
+        for i in 1..=3 {
+            conn.execute(
+                "INSERT INTO todos (title, description, priority, due_date, status, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?6)",
+                rusqlite::params![format!("任务{}", i), format!("描述{}", i), "Medium", "2026-08-20", "Pending", "2026-08-14T08:00:00"],
+            ).unwrap();
+        }
+        conn.execute("DELETE FROM todos WHERE id = 2", []).unwrap();
+        let remaining: Vec<i64> = {
+            let mut stmt = conn.prepare("SELECT id FROM todos ORDER BY id").unwrap();
+            let rows = stmt.query_map([], |row| row.get(0)).unwrap();
+            rows.map(|r| r.unwrap()).collect()
+        };
+        assert_eq!(remaining, vec![1, 3]);
+    }
